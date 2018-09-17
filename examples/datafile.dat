@@ -5,6 +5,7 @@
 15  30  0
 20  20  0
 30  10  0
-# outcrop(x/y) dip strike c phi gamma theta thetas tehatr ks a m n e pr name
 1
+; outcrop(x/y) dip strike
 ...
+

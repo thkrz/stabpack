@@ -1,6 +1,6 @@
 import sys
 
-cfg = {'DIMENSION': 2}
+cfg = {'DIMENSION': 2, 'DATAFILE': ''}
 
 
 def die(s):
