@@ -5,4 +5,8 @@ setup(
     version='0.1',
     license='MIT',
     packages=['ssat',],
+    install_required=[
+        'matplotlib',
+        'numpy'
+    ]
 )
