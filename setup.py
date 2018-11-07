@@ -5,4 +5,10 @@ setup(
     version='0.1',
     license='MIT',
     packages=['ssat',],
+    install_requires=[
+        'h5py',
+        'matplotlib',
+        'numpy',
+        'scipy'
+    ]
 )

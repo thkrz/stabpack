@@ -1,8 +1,9 @@
+import h5py
 import numpy as np
 
 from ssat import *
-from ssat.hydrology import HydraulicConductivity
-from ssat.stats import loglap
+from ssat.ssatlib.hydro import WaterRetentionCurve, conductivity
+from ssat.ssatlib.stats import loglap
 
 ALPHA = 1.38
 CC = 130.
@@ -38,15 +39,28 @@ def nimmo(x, y, rho, phi):
     res = ptf(1e6, rho, phi)
     xp = np.logspace(0, 6)
     fp = (ptf(x, rho, phi) - res) / (phi - res)
-    hc = HydraulicConductivity()
-    hc.fit(xp, fp)
+    wrc = WaterRetentionCurve()
+    wrc.fit(xp, fp)
+    return (res, wrc)
 
 
 def main():
-    with open(cfg['ESTFILE']) as f:
-        x = np.fromstring(f.readline(), sep=' ')
-        n = x.size
-        for line in f:
-            y = np.fromstring(line, sep=' ')
-            nimmo(x, y[:n], y[n], y[n + 1])
-    return False
+    with h5py.File(cfg['DATAFILE'], 'r+') as f:
+        for name in f['LAYER']:
+            g = f['LAYER'][name]
+            dset = g['GRANULOMETRY']
+            rho = dset.attrs['PARTICLE_DENSITY']
+            phi = dset.attrs['POROSITY']
+            x = dset[:, 0]
+            y = dset[:, 1]
+            r, wrc = nimmo(x, y, rho, phi)
+
+            if 'EST' in g:
+                del g['EST']
+            est = g.create_group('EST')
+            est.attrs['A'] = wrc.a
+            est.attrs['N'] = wrc.n
+            est.attrs['RESIDUAL_WATER'] = r
+
+            est.attrs['HYDRAULIC_CONDUCTIVITY'] = Ks(dset[:, :], loglap.ppf)
+    return 0

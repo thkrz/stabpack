@@ -2,13 +2,11 @@
 import os
 import shlex
 import sys
-sys.path.insert(0,
-                os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from ssat import cfg, die
-from ssat import mesh
+from ssat import fit
 
-rc = {'mesh': mesh.main}
+rc = {'fit': fit.main}
 
 
 def usage():
@@ -28,11 +26,16 @@ if __name__ == '__main__':
                 cfg[key] = type(cfg[key])(val)
             except ValueError:
                 die('invalid config file.')
+    ret = 1
     while len(sys.argv) > 1:
         cmd = sys.argv.pop(1)
         sys.argv[0] = cmd
         if cmd not in rc.keys():
             usage()
-        if rc[cmd]():
+        ret = rc[cmd]()
+        if ret == 1:
+            ret = 0
             break
-    sys.exit(0)
+        elif ret < 0:
+            die(cmd + ' returned non-zero exit status.')
+    sys.exit(ret)

@@ -3,7 +3,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 
-class HydraulicConductivity:
+class WaterRetentionCurve:
     def __init__(self, a=0.0005, n=2.0):
         self.a = a
         self.m = 1. - 1. / n
@@ -11,10 +11,8 @@ class HydraulicConductivity:
 
     def fit(self, xp, fp):
         def f(x, a, n):
-            self.a = a
-            self.m = 1. - 1. / n
-            self.n = n
-            return self.waterContent(x)
+            self.__init__(a, n)
+            return self.theta(x)
 
         def grad(x, a, n):
             y = np.zeros((x.size, 2))
@@ -27,14 +25,24 @@ class HydraulicConductivity:
 
         popt, pcov = curve_fit(f, xp, fp, p0=[0.0005, 2.0], jac=grad)
 
-    def pressure(self, T):
+    def psi(self, T):
+        T = np.asarray(T)
+        scalar_input = False
+        if T.ndim == 0:
+            T = T[None]
+            scalar_input = True
+
         p = (1. / self.a**self.n * (1. / T)**(1. / self.m) - 1.)**(1. / self.n)
         pe = self.a * (0.046 * self.m + 2.07 * self.m**2 + 19.5 * self.m**3
                        ) / (1. + 4.7 * self.m + 16. * self.m**2)
-        return np.maximum(p, pe)
+        p[p < pe] = pe
 
-    def relative(self, T):
+        if scalar_input:
+            return np.squeeze(p)
+        return p
+
+    def K_rel(self, T):
         return np.sqrt(T) * (1. - (1. - T**(1. / self.m))**self.m)**2
 
-    def waterContent(self, h):
+    def theta(self, h):
         return (1. / (1. + (self.a * h)**self.n))**self.m
