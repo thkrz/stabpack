@@ -2,6 +2,8 @@ import numpy as np
 
 from scipy.optimize import curve_fit
 
+from ssat.ssatlib import stats
+
 d = 1.0
 a = 1.0
 b = 1.0
@@ -48,8 +50,8 @@ def fit(xp, fp):
         y[mask, 2] = -a * c / (a + b)**2
         return y
 
-    popt, pcov = curve_fit(f, xp, fp, jac=grad)
-    return np.sqrt(np.diag(pcov))
+    popt, pcov = curve_fit(f, xp, fp, p0=np.ones(3), jac=grad)
+    return stats.rmse(fp, cdf(xp))
 
 
 def pdf(x):

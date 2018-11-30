@@ -4,8 +4,37 @@ import numpy as np
 import tabulator
 import sys
 
+from ssat.ssatlib import pedo
 
-def name():
+
+class DataSheet:
+    def __init__(self, name):
+        self.name = name
+
+    def properties(self):
+        p = []
+        with tabulator.Stream(self.name, sheet=2, headers=3) as stream:
+            self.headers = stream.headers[5:19]
+            for row in stream:
+                if row[0] is None:
+                    break
+                n = row[0]
+                for c in ':/ ':
+                    n = n.replace(c, '_')
+                p.append((n, row[5:19], np.array(row[19:32])))
+        return p
+
+    def xyz(self):
+        p = []
+        with tabulator.Stream(self.name, sheet=1, headers=1) as stream:
+            for row in stream:
+                if row[0] is None:
+                    break
+                p.append((row[0], row[1], row[2]))
+        return np.array(p)
+
+
+def filename():
     s = sys.argv[1]
     if s.endswith('.ods'):
         s = s[:-4]
@@ -13,37 +42,18 @@ def name():
 
 
 def main():
-    f = h5py.File(name(), 'w')
+    dat = DataSheet(sys.argv[1])
+    f = h5py.File(filename(), 'w')
+    f.create_dataset('PROFILE', data=dat.xyz())
+    for name, prop, grain in dat.properties():
+        g = f.create_group('LAYER/' + name.upper())
+        for k, v in zip(dat.headers, prop):
+            if v:
+                g.attrs[k] = v
 
-    xyz = []
-    with tabulator.Stream(sys.argv[1], sheet=1, headers=1) as stream:
-        for row in stream:
-            if row[0] is None:
-                break
-            xyz.append((row[0], row[1], row[2]))
-    f.create_dataset('PROFILE', data=np.array(xyz))
-
-    with tabulator.Stream(sys.argv[1], sheet=2, headers=3) as stream:
-        for row in stream:
-            if row[0] is None:
-                break
-            g = f.create_group('LAYER/' + row[0].upper())
-            for i, key in enumerate(stream.headers[1:17]):
-                val = row[i + 1]
-                if val is not None:
-                    g.attrs[key] = val
-
-            arr = np.array(
-                [[0.002, row[18]], [0.0063, row[19]], [0.02, row[20]],
-                 [0.063, row[21]], [0.2, row[22]], [0.63, row[23]], [
-                     2.0, row[24]
-                 ], [6.3, row[25]], [20.0, row[26]], [63.0, row[27]],
-                 [200.0, row[28]], [630.0, row[29]], [2000.0, row[30]]])
-            dset = g.create_dataset('GRANULOMETRY', data=arr)
-            for i, key in enumerate(stream.headers[17:19]):
-                val = row[i + 17]
-                if val is not None:
-                    dset.attrs[key] = val
+        dset = g.create_dataset(
+            'GRANULOMETRY',
+            data=np.column_stack((pedo.diaspace(), grain)))
     f.close()
     return 0
 

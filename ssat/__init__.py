@@ -1,13 +1,23 @@
 import sys
 
-cfg = {'DIMENSION': 2, 'DATAFILE': ''}
+cfg = {
+    'DIMENSION': 2,
+    'DATAFILE': '',
+    'LOGFILE': 'ssat.log',
+    'HYDRO_MODEL': 'auto',
+    'STABILITY_MODEL': 'auto',
+    'SUCTION_MODEL': 'auto'
+}
 
 
-def die(s):
+def die(s, exit_status=1):
     log(s)
-    sys.exit(1)
+    sys.exit(exit_status)
 
 
 def log(s, end='\n'):
     sys.stderr.write(s + end)
+    if cfg['LOGFILE']:
+        with open(cfg['LOGFILE'], 'a') as f:
+            f.write(s + end)
     sys.stderr.flush()

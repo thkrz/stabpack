@@ -2,6 +2,8 @@ import numpy as np
 
 from scipy.optimize import curve_fit
 
+from ssat.ssatlib import stats
+
 
 class WaterRetentionCurve:
     def __init__(self, a=0.0005, n=2.0):
@@ -12,7 +14,7 @@ class WaterRetentionCurve:
     def fit(self, xp, fp):
         def f(x, a, n):
             self.__init__(a, n)
-            return self.theta(x)
+            return self.Theta(x)
 
         def grad(x, a, n):
             y = np.zeros((x.size, 2))
@@ -24,6 +26,7 @@ class WaterRetentionCurve:
             return y
 
         popt, pcov = curve_fit(f, xp, fp, p0=[0.0005, 2.0], jac=grad)
+        return stats.rmse(fp, self.Theta(xp))
 
     def psi(self, T):
         T = np.asarray(T)
@@ -44,5 +47,5 @@ class WaterRetentionCurve:
     def K_rel(self, T):
         return np.sqrt(T) * (1. - (1. - T**(1. / self.m))**self.m)**2
 
-    def theta(self, h):
+    def Theta(self, h):
         return (1. / (1. + (self.a * h)**self.n))**self.m
