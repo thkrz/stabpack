@@ -1,3 +1,4 @@
+"""Derive parameters"""
 import h5py
 import numpy as np
 
@@ -6,8 +7,6 @@ from ssat.ssatlib.constants import F0, F1
 from ssat.ssatlib.hydro import WaterRetentionCurve
 from ssat.ssatlib.pedo import grade, sort
 from ssat.ssatlib.stats import loglap
-
-description = 'trans it'
 
 phi = 0.5
 rho = 2650.

@@ -26,7 +26,7 @@ if __name__ == '__main__':
         if not ispkg:
             m = importlib.import_module('..' + mod, package='ssat.__init__')
             rc[mod] = m.main
-            description += '\t{}: {}\n'.format(mod, m.description)
+            description += '\t{}: {}\n'.format(mod, m.__doc__)
 
     with open(sys.argv.pop(1)) as f:
         for tok in shlex.split(f.read(), comments=True):
