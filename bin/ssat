@@ -8,25 +8,21 @@ import sys
 import ssat
 from ssat import *
 
-description = """usage: ssat cfgfile command...
+usage = """usage: ssat cfgfile command...
 commands are:
 """
 rc = {}
 
 
-def usage():
-    die(description)
-
-
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        usage()
+        die(usage)
 
     for i, mod, ispkg in pkgutil.iter_modules(ssat.__path__):
         if not ispkg:
             m = importlib.import_module('..' + mod, package='ssat.__init__')
             rc[mod] = m.main
-            description += '\t{}: {}\n'.format(mod, m.__doc__)
+            usage += '\t{}: {}\n'.format(mod, m.__doc__)
 
     with open(sys.argv.pop(1)) as f:
         for tok in shlex.split(f.read(), comments=True):
@@ -37,16 +33,16 @@ if __name__ == '__main__':
                 cfg[key] = type(cfg[key])(val)
             except ValueError:
                 die('invalid config file.')
-    ret = 1
     while len(sys.argv) > 1:
         cmd = sys.argv.pop(1)
         sys.argv[0] = cmd
         if cmd not in rc.keys():
-            usage()
-        ret = rc[cmd]()
-        if ret == 1:
-            ret = 0
-            break
-        elif ret < 0:
+            die(usage)
+        exit_status = rc[cmd]()
+        if exit_status == 1:
+            sys.exit(0)
+            # not reached
+        if exit_status < 0:
             die(cmd + ' returned non-zero exit status.')
-    sys.exit(ret)
+            # not reached
+    sys.exit(0)
