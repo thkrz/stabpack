@@ -1,3 +1,4 @@
+import numba
 import numpy as np
 
 from collections import namedtuple
@@ -6,11 +7,29 @@ Bounds = namedtuple('Bounds', ['xmin', 'ymin', 'xmax', 'ymax'])
 Point = namedtuple('Point', ['x', 'y'])
 
 
-@dataclass
 class Edge:
-    a: Point
-    b: Point
-    visited: bool
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def includes(self, p):
+        d = (p.x - self.a.x) * (self.b.y - self.a.y) - (p.y - self.a.y) * (
+            self.b.x - self.a.x)
+        return d <= 0
+
+    def intersect(self, a, b):
+        def det(a, b):
+            return a.x * b.y - a.y * b.x
+
+        dx = Point((a.x - b.x, self.a.x - self.b.x))
+        dy = Point((a.y - b.y, self.a.y - self.b.y))
+        div = det(dx, dy)
+        if div == 0:
+            return None
+        d = Point((det(a, b), det(self.a, self.b)))
+        x = det(d, dx) / div
+        y = det(d, dy) / div
+        return Point((x, y))
 
 
 class Polygon:
@@ -26,11 +45,11 @@ class Polygon:
         self.__points = [Point(p) for p in points]
         self.__len = len(self.__points)
 
-        xmin = points[0].x
-        ymin = points[0].y
-        xmax = points[0].x
-        ymax = points[0].y
-        for x, y in points:
+        xmin = self.__points[0].x
+        ymin = self.__points[0].y
+        xmax = self.__points[0].x
+        ymax = self.__points[0].y
+        for x, y in self.__points:
             if xmin > x:
                 xmin = x
             if xmax < x:
@@ -42,26 +61,51 @@ class Polygon:
         self.__bounds = Bounds(xmin, ymin, xmax, ymax)
 
     def __iter__(self):
-        self.curr = 0
+        self.__curr = 0
         return self
 
     def __len__(self):
         return self.__len + 1
 
     def __next__(self):
-        i = self.curr
+        i = self.__curr
         if i > self.__len or self.__len == 0:
             raise StopIteration
         if i == self.__len:
             i = 0
-        self.curr += 1
+        self.__curr += 1
         return self.__points[i]
+
+    def area(self):
+        a = 0
+        for e in self.edges():
+            a += e.a.x * e.b.y - e.b.x * e.a.y
+        return .5 * a
 
     def bounds(self):
         return self.__bounds
 
+    def clip(self, p):
+        points = self.__points.copy()
+        for e in p.edges():
+            points_c = points.copy()
+            points.clear()
+            s = points_c[-1]
+            for p in points_c:
+                if e.includes(p):
+                    if not e.includes(s):
+                        points.append(e.intersect(s, p))
+                    points.append(p)
+                elif e.includes(s):
+                    points.append(e.intersect(s, p))
+                s = p
+        if len(points) < 3:
+            return None
+        return Polygon(points)
+
+    @numba.jit
     def contains(self, p):
-        def wind(a, b, c) -> int:
+        def wind(a, b, c):
             if a.y == b.y == c.y:
                 if b.x <= a.x <= c.x or c.x <= a.x <= b.x:
                     return 0
@@ -75,13 +119,8 @@ class Polygon:
             if a.y <= b.y or a.y > c.y:
                 return 1
             det = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
-            if det > 0:
-                return -1
-            elif det < 0:
-                return 1
-            return 0
+            return np.sign(det)
 
-        p = Point(p)
         xmin, ymin, xmax, ymax = self.__bounds
         if xmin > p.x or xmax < p.x or ymin < p.y or ymax > p.y:
             return False
@@ -101,11 +140,20 @@ class Polygon:
             j = i + 1
             if j == self.__len:
                 j = 0
-            e.append(Edge(self.__points[i], self.__points[j], False))
+            e.append(Edge(self.__points[i], self.__points[j]))
         return e
 
-    def split(self, a, b):
-        pass
+    @numba.jit
+    def split(self, a, alpha):
+        x = self.__bounds.xmin if alpha > 0 else self.__bounds.xmax
+        b = Point((x, x * np.tan(alpha) + a.y))
+        points = []
+        for i, e in enumerate(self.edges()):
+            p = e.intersect(a, b)
+            if p:
+                points.append(p)
+            else:
+                points.append(e.a)
 
 
 class MultiPolygon:
@@ -114,14 +162,14 @@ class MultiPolygon:
         self.features = {}
 
     def __iter__(self):
-        self.curr = 0
+        self.__curr = 0
         return self
 
     def __next__(self):
-        i = self.curr
+        i = self.__curr
         if i == len(self.__polygons):
             raise StopIteration
-        self.curr += 1
+        self.__curr += 1
         return self.__polygons[i]
 
     def contains(self, p):
