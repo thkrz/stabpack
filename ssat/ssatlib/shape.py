@@ -3,8 +3,44 @@ import numpy as np
 
 from collections import namedtuple
 
-Bounds = namedtuple('Bounds', ['xmin', 'ymin', 'xmax', 'ymax'])
-Point = namedtuple('Point', ['x', 'y'])
+
+def __cross(a, b):
+    return a.x * b.y - a.y * b.x
+
+
+class Bounds:
+    def __init__(self, points):
+        self.xmin = points[0].x
+        self.ymin = points[0].y
+        self.xmax = points[0].x
+        self.ymax = points[0].y
+        for x, y in points:
+            if self.xmin > x:
+                self.xmin = x
+            if self.xmax < x:
+                self.xmax = x
+            if self.ymin > y:
+                self.ymin = y
+            if self.ymax < y:
+                self.ymax = y
+
+    def contains(self, p):
+        return self.xmin <= p.x <= self.xmax and self.ymin <= p.y <= self.ymax
+
+
+class Point:
+    def __add__(self, p):
+        return Point((self.x + p.x, self.y + p.y))
+
+    def __eq__(self, p):
+        return self.x == p.x and self.y == p.y
+
+    def __init__(self, x):
+        self.x = x[0]
+        self.y = x[1]
+
+    def __sub__(self, p):
+        return Point((self.x - p.x, self.y - p.y))
 
 
 class Edge:
@@ -12,23 +48,18 @@ class Edge:
         self.a = a
         self.b = b
 
-    def includes(self, p):
-        d = (p.x - self.a.x) * (self.b.y - self.a.y) - (p.y - self.a.y) * (
-            self.b.x - self.a.x)
-        return d <= 0
+    def inside(self, p):
+        return __cross(p - self.a, self.b - self.a) <= 0
 
     def intersect(self, a, b):
-        def det(a, b):
-            return a.x * b.y - a.y * b.x
-
         dx = Point((a.x - b.x, self.a.x - self.b.x))
         dy = Point((a.y - b.y, self.a.y - self.b.y))
-        div = det(dx, dy)
+        div = __cross(dx, dy)
         if div == 0:
             return None
-        d = Point((det(a, b), det(self.a, self.b)))
-        x = det(d, dx) / div
-        y = det(d, dy) / div
+        d = Point((__cross(a, b), __cross(self.a, self.b)))
+        x = __cross(d, dx) / div
+        y = __cross(d, dy) / div
         return Point((x, y))
 
 
@@ -41,24 +72,9 @@ class Polygon:
     def __init__(self, points, closed=False):
         if closed:
             points = points[:-1]
-
         self.__points = [Point(p) for p in points]
         self.__len = len(self.__points)
-
-        xmin = self.__points[0].x
-        ymin = self.__points[0].y
-        xmax = self.__points[0].x
-        ymax = self.__points[0].y
-        for x, y in self.__points:
-            if xmin > x:
-                xmin = x
-            if xmax < x:
-                xmax = x
-            if ymin > y:
-                ymin = y
-            if ymax < y:
-                ymax = y
-        self.__bounds = Bounds(xmin, ymin, xmax, ymax)
+        self.__bounds = Bounds(self.__points)
 
     def __iter__(self):
         self.__curr = 0
@@ -79,7 +95,7 @@ class Polygon:
     def area(self):
         a = 0
         for e in self.edges():
-            a += e.a.x * e.b.y - e.b.x * e.a.y
+            a += __cross(e.a, e.b)
         return .5 * a
 
     def bounds(self):
@@ -92,11 +108,11 @@ class Polygon:
             points.clear()
             s = points_c[-1]
             for p in points_c:
-                if e.includes(p):
-                    if not e.includes(s):
+                if e.inside(p):
+                    if not e.inside(s):
                         points.append(e.intersect(s, p))
                     points.append(p)
-                elif e.includes(s):
+                elif e.inside(s):
                     points.append(e.intersect(s, p))
                 s = p
         if len(points) < 3:
@@ -105,12 +121,12 @@ class Polygon:
 
     @numba.jit
     def contains(self, p):
-        def wind(a, b, c):
+        def rot(a, b, c):
             if a.y == b.y == c.y:
                 if b.x <= a.x <= c.x or c.x <= a.x <= b.x:
                     return 0
                 return 1
-            if a.y == b.y and a.x == b.x:
+            if a == b:
                 return 0
             if b.y > c.y:
                 swap = b.y
@@ -118,21 +134,19 @@ class Polygon:
                 c.y = swap
             if a.y <= b.y or a.y > c.y:
                 return 1
-            det = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
-            return np.sign(det)
+            return np.sign(__cross(b - a, c - a))
 
-        xmin, ymin, xmax, ymax = self.__bounds
-        if xmin > p.x or xmax < p.x or ymin < p.y or ymax > p.y:
+        if not self.__bounds.contains(p):
             return False
         t = -1
         for i in range(self.__len):
             j = i + 1
             if j == self.__len:
                 j = 0
-            t *= wind(p, self.__points[i], self.__points[j])
+            t *= rot(p, self.__points[i], self.__points[j])
             if t == 0:
                 break
-        return t == 1 or t == 0
+        return t == -1 or t == 0
 
     def edges(self):
         e = []
@@ -147,13 +161,14 @@ class Polygon:
     def split(self, a, alpha):
         x = self.__bounds.xmin if alpha > 0 else self.__bounds.xmax
         b = Point((x, x * np.tan(alpha) + a.y))
-        points = []
-        for i, e in enumerate(self.edges()):
+        sec = []
+        for e in self.edges():
             p = e.intersect(a, b)
             if p:
-                points.append(p)
-            else:
-                points.append(e.a)
+                sec.append(p)
+        n = len(sec) / 2 + 1
+        P = [] * n
+        return (Polygon(A), Polygon(B))
 
 
 class MultiPolygon:

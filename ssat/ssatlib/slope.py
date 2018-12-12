@@ -1,5 +1,7 @@
 import numpy as np
 
+from typing import Tuple
+
 from ssat.ssatlib.constants import G
 
 
@@ -8,7 +10,7 @@ class Facies(MultiPolygon):
     c: float
     phi: float
     rho_b: float
-    a: (float, float)
+    a: Tuple[float, float]
     theta: float
     Ks: float
     E: float
