@@ -1,19 +1,13 @@
 import numba
 import numpy as np
 
-from collections import namedtuple
-
-
-def __cross(a, b):
-    return a.x * b.y - a.y * b.x
+from typing import NamedTuple
 
 
 class Bounds:
     def __init__(self, points):
-        self.xmin = points[0].x
-        self.ymin = points[0].y
-        self.xmax = points[0].x
-        self.ymax = points[0].y
+        self.xmin, self.xmax = points[0].x
+        self.ymin, self.ymax = points[0].y
         for x, y in points:
             if self.xmin > x:
                 self.xmin = x
@@ -28,39 +22,38 @@ class Bounds:
         return self.xmin <= p.x <= self.xmax and self.ymin <= p.y <= self.ymax
 
 
-class Point:
+class Point(NamedTuple):
+    x: float
+    y: float
+    # z: float = 0.0
+
     def __add__(self, p):
-        return Point((self.x + p.x, self.y + p.y))
+        return Point(self.x + p.x, self.y + p.y)
 
     def __eq__(self, p):
         return self.x == p.x and self.y == p.y
 
-    def __init__(self, x):
-        self.x = x[0]
-        self.y = x[1]
-
     def __sub__(self, p):
-        return Point((self.x - p.x, self.y - p.y))
+        return Point(self.x - p.x, self.y - p.y)
 
 
-class Edge:
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
+class Edge(NamedTuple):
+    a: Point
+    b: Point
 
     def inside(self, p):
-        return __cross(p - self.a, self.b - self.a) <= 0
+        return np.cross(p - self.a, self.b - self.a) <= 0
 
     def intersect(self, a, b):
-        dx = Point((a.x - b.x, self.a.x - self.b.x))
-        dy = Point((a.y - b.y, self.a.y - self.b.y))
-        div = __cross(dx, dy)
+        dx = (a.x - b.x, self.a.x - self.b.x)
+        dy = (a.y - b.y, self.a.y - self.b.y)
+        div = np.cross(dx, dy)
         if div == 0:
             return None
-        d = Point((__cross(a, b), __cross(self.a, self.b)))
-        x = __cross(d, dx) / div
-        y = __cross(d, dy) / div
-        return Point((x, y))
+        d = (np.cross(a, b), np.cross(self.a, self.b))
+        x = np.cross(d, dx) / div
+        y = np.cross(d, dy) / div
+        return Point(x, y)
 
 
 class Polygon:
@@ -95,7 +88,7 @@ class Polygon:
     def area(self):
         a = 0
         for e in self.edges():
-            a += __cross(e.a, e.b)
+            a += np.cross(e.a, e.b)
         return .5 * a
 
     def bounds(self):
@@ -134,7 +127,7 @@ class Polygon:
                 c.y = swap
             if a.y <= b.y or a.y > c.y:
                 return 1
-            return np.sign(__cross(b - a, c - a))
+            return np.sign(np.cross(b - a, c - a))
 
         if not self.__bounds.contains(p):
             return False
@@ -160,7 +153,7 @@ class Polygon:
     @numba.jit
     def split(self, a, alpha):
         x = self.__bounds.xmin if alpha > 0 else self.__bounds.xmax
-        b = Point((x, x * np.tan(alpha) + a.y))
+        b = Point(x, x * np.tan(alpha) + a.y)
         sec = []
         for e in self.edges():
             p = e.intersect(a, b)

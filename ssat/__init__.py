@@ -17,7 +17,4 @@ def die(s, exit_status=1):
 
 def log(s, end='\n'):
     sys.stderr.write(s + end)
-    if cfg['LOGFILE']:
-        with open(cfg['LOGFILE'], 'a') as f:
-            f.write(s + end)
     sys.stderr.flush()
