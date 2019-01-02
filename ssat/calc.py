@@ -15,10 +15,20 @@ step = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
 
 
 def initial_values():
-    a = np.array([1, 2])
-    b = np.array([10, 8])
-    p = bezier.arc(6, a, b, 2.0)
+    import matplotlib.path as mpath
+    import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
+
+    a = np.array([0, 0])
+    b = np.array([10, 0])
+    p = bezier.arc(a, b, depth=2.0)
+    t = np.linspace(0, 1)
+    s = bezier.bezier(t, p)
+
     print(p)
+    print(s)
+    #plt.plot(s[:, 0], s[:, 1])
+    #plt.show()
 
 
 def calc(ctrl_points):
@@ -28,7 +38,6 @@ def calc(ctrl_points):
 def main():
     if step == 0:
         return -1
-    print(bezier)
     ctrl_points = initial_values()
     return 0
 
