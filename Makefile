@@ -1,4 +1,4 @@
 clean:
-	@find ./ssat -name '__pycache__' -exec rm -rf {} \;
+	@find ./ssat -name '__pycache__' -prune -exec rm -rf {} +
 
 .PHONY: clean

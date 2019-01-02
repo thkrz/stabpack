@@ -1,126 +1,45 @@
 #!/usr/bin/python3 -W ignore
+import matplotlib.pyplot as plt
 import numpy as np
 import sys
-
-from collections import namedtuple
 
 from ssat import *
 from ssat.ssatlib import flag
 from ssat.ssatlib import hydro
-from ssat.ssatlib.constants import G
 from ssat.ssatlib.stats import loglap
 
-usage = "usage: gsa [-density float] [-porosity float] [-t float] file"
-K = namedtuple('K', ['N', 'phi', 'de', 'valid'])
-U = 0.
 n = 0.
 rho = 0.
-k = 0.
-d = None
-w = None
+usage = "usage: gsa [-density float] [-porosity float] [-t float] file"
 
 
-def classify():
-    def fmt(o):
-        q, p = o
-        q = q.lower()
-        if p > .01:
-            if p <= .05:
-                q = '(v{})'.format(q)
-            elif p <= .2:
-                q = '({})'.format(q)
-            return q
-        return ''
+def nimmo(h, alpha=1.38, cc=130.):
+    h = np.asarray(h)
+    scalar_input = False
+    if h.ndim == 0:
+        h = h[None]
+        scalar_input = True
 
-    c = w[0]
-    si = w[1:4].sum()
-    s = w[4:7].sum()
-    m = si + c
-    g = w[7:10].sum()
-    if g > .01:
-        t = [('G', g), ('S', s), ('M', m)]
-    else:
-        t = [('S', s), ('SI', si), ('C', c)]
-    rank = sorted(t, key=lambda x: -x[1])
-    return fmt(rank[2]) + fmt(rank[1]) + rank[0][0]
+    r = np.zeros(h.size)
+    e = n / (1. - n)
+    xi = (2. * e) / (3. * cc**2) * (
+        (loglap.a * loglap.b) / (loglap.a + loglap.b) *
+        (1. / (2. * np.pi * rho)))**(1. - alpha)
+    mask = h < 1. / (np.sqrt(xi) * loglap.d**alpha)
+    r[mask] = (loglap.d**(loglap.b * (alpha - 1.)) * xi * h[mask]**2)**(
+        1. / (loglap.b * (alpha - 1.) - 2. * alpha))
+    mask ^= True
+    r[mask] = (loglap.d**(loglap.a * (1. - alpha)) * xi * h[mask]**2)**(
+        1. / (loglap.a - (2. + loglap.a) * alpha))
+    t = n * loglap.cdf(r)
 
-
-def diaspace(dp, wp):
-    d = np.array([
-        0.002, 0.0063, 0.02, 0.063, 0.2, 0.63, 2.0, 6.3, 20.0, 63.0, 200.0,
-        630.0, 2000.0
-    ])
-    w = np.zeros(d.size)
-    for i, r in enumerate(dp):
-        for j, e in enumerate(d):
-            if r < e:
-                w[j] += wp[i]
-                break
-    return (d, w)
-
-
-def phi(d):
-    return -np.log2(d)
-
-
-def sorting(numeric=False):
-    d95 = phi(loglap.ppf(.95))
-    d84 = phi(loglap.ppf(.84))
-    d16 = phi(loglap.ppf(.16))
-    d5 = phi(loglap.ppf(.05))
-    si = (d84 - d16) / 4. + (d95 - d5) / 6.6
-    if numeric:
-        return si
-    if si < .35:
-        return 'very well sorted'
-    if si < .5:
-        return 'well sorted'
-    if si < 1.:
-        return 'moderately sorted'
-    if si < 2.:
-        return 'poorly sorted'
-    if si < 4.:
-        return 'very poorly sorted'
-    return 'extremely poorly sorted'
-
-
-def swcc():
-    def nimmo(h, alpha=1.38, cc=130.):
-        h = np.asarray(h)
-        scalar_input = False
-        if h.ndim == 0:
-            h = h[None]
-            scalar_input = True
-
-        r = np.zeros(h.size)
-        e = n / (1. - n)
-        xi = (2. * e) / (3. * cc**2) * (
-            (loglap.a * loglap.b) / (loglap.a + loglap.b) *
-            (1. / (2. * np.pi * rho)))**(1. - alpha)
-        mask = h < 1. / (np.sqrt(xi) * loglap.d**alpha)
-        r[mask] = (loglap.d**(loglap.b * (alpha - 1.)) * xi * h[mask]**2)**(
-            1. / (loglap.b * (alpha - 1.) - 2. * alpha))
-        mask ^= True
-        r[mask] = (loglap.d**(loglap.a * (1. - alpha)) * xi * h[mask]**2)**(
-            1. / (loglap.a - (2. + loglap.a) * alpha))
-        t = n * loglap.cdf(r)
-
-        if scalar_input:
-            return np.squeeze(t)
-        return t
-
-    log('Soil water characteristic curve:')
-    tr = float(nimmo(1e6))
-    log('Saturated/residual water content: {:.2f}/{:.2f}'.format(n, tr))
-    xp = np.logspace(0, 6)
-    fp = (nimmo(xp) - tr) / (n - tr)
-    rc = hydro.Retention()
-    rc.fit(xp, fp)
-    log('Parameter: a = {:.4f}, n = {:.4f}'.format(rc.a, rc.n))
+    if scalar_input:
+        return np.squeeze(t)
+    return t
 
 
 if __name__ == '__main__':
-    flag.flags = {'density': 2650.0, 'porosity': 0.0, 't': 20.0}
+    flag.flags = {'density': 2650.0, 'porosity': 0.0}
     if flag.parse() or len(sys.argv) < 1:
         die(usage)
 
@@ -133,65 +52,20 @@ if __name__ == '__main__':
     rrmse, rmse = loglap.fit(d, np.cumsum(w))
     log('Fit rrms/rms: {:.2f}/{:.2f}'.format(rrmse, rmse))
 
-    d10 = loglap.ppf(.1)
-    U = loglap.ppf(.6) / loglap.ppf(.1)
     if flag.flags['porosity'] == 0:
+        U = loglap.ppf(.6) / loglap.ppf(.1)
         n = .255 * (1. + .83**U)
         log('Calculated porosity: {:.2f}'.format(n))
     else:
         n = flag.flags['porosity']
     rho = flag.flags['density']
 
-    log('Classification: ' + classify())
-    log('Sorting: ' + sorting())
-
-    hydro.temperature = flag.flags['t']
-    k = (hydro.rho() * G / hydro.mu()) * 10
-    e = n / (1. - n)
-    d5 = loglap.ppf(.05) * .01
-    d10 *= .01
-    d20 = loglap.ppf(.2) * .01
-    d50 = loglap.ppf(.5) * .01
-    model = {
-        'hazen_simple':
-        K(10. / k, 1., d10, True),
-        'hazen':
-        K(6e-4, 1. + 10. * (n - .26), d10, .01 < d10 < .3 and U < 5),
-        'slichter':
-        K(1e-2, np.power(n, 3.287), d10, .01 < d10 < .5),
-        'beyer':
-        K(5.2e-4 * np.log(500. / U), 1., d10, .006 < d10 < .06 and 1 < U < 20),
-        'sauerbrei':
-        K(
-            3.75e-5 * (1.093e-4 * hydro.temperature**2 +
-                       2.102e-2 * hydro.temperature + .5889),
-            n**3 / (1. - n)**2, d10, d10 < .05),
-        'kruger':
-        K(4.35e-4, n / (1. - n)**2, 1. / np.divide(w, d * .1).sum(), U > 5),
-        'bialas':
-        K(4.8e-4 * np.power(10., .3), 1., np.power(d20, 1.15), U < 5),
-        'alyamani':
-        K(1300., 1., (d10 - d50 * .2) + .025 * (d50 - d10), True),
-        'chapuis':
-        K(1. / k, np.power(10., 1.291 * e - .6435),
-          np.power(d10,
-                   np.power(10., .5504 - .2937 * e) * .5), .3 < n < .7
-          and .01 < d10 < .2 and 2 < U < 12 and d10 / d5 < 1.4)
-    }
-
-    for key, val in model.items():
-        log(key + ': {:.4e}'.format(float(k * val.N * val.phi * val.de)))
-    # swcc()
+    tr = float(nimmo(1e6))
+    xp = np.logspace(0, 6)
+    fp = (nimmo(xp) - tr) / (n - tr)
+    rc = hydro.Retention()
+    rc.fit(xp, fp)
+    log('Saturated/residual water content: {:.2f}/{:.2f}'.format(n, tr))
+    log('Parameter: a = {:.4f}, n = {:.4f}'.format(rc.a, rc.n))
 
     sys.exit(0)
-
-
-def k_terzaghi(grains='smooth'):
-    N = {'smooth': 10.7e-3, 'coarse': 6.1e-3}
-    phi = np.power((n - .13) / np.cbrt(1. - n), 2)
-    de = loglap.ppf(.1) * .1
-    return N[grains] * phi * de
-
-
-def k_barr(grains='spherical'):
-    Cs = {'spherical': 1., 'angular': 1.35}
