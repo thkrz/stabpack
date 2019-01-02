@@ -3,10 +3,9 @@ import sys
 cfg = {
     'DIMENSION': 2,
     'DATAFILE': '',
-    'LOGFILE': 'ssat.log',
-    'HYDRO_MODEL': 'auto',
-    'STABILITY_MODEL': 'auto',
-    'SUCTION_MODEL': 'auto'
+    'PARADX': 1.0,
+    'MINLEN': 2.0,
+    'RANK': 3
 }
 
 

@@ -1,4 +1,4 @@
-subroutine amoeba(fcn, x, n)
+subroutine fmin(fcn, x, n)
   integer, intent(in) :: n
   real, intent(inout) :: x(n)
   external :: fcn

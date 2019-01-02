@@ -27,33 +27,28 @@ class Slope:
         'profile': True
     }
 
-    def __getitem__(self, key):
-        c = type(key)
-        if c == str:
-            for s in self.strata:
-                if key == s.name:
-                    return s
-        elif c == int:
-            return self.strata[key]
-        return None
-
-    def __init__(self):
-        self.strata = []
+    def __init__(self, dim=2):
+        self.__dim = dim
+        self.__layers = []
 
     def dump(self):
         print('BEGINSLOPE')
         print('ENDSLOPE')
 
     def top(self, x):
-        return np.interp(x, self.profile[:, 0], self.profile[:, 1])
+        if self.__dim == 2:
+            return np.interp(x, self.profile[:, 0], self.profile[:, 1])
+        return None
 
     @staticmethod
     def load(name):
-        def __toarray(o):
-            for k, b in o.__words__.items():
+        def toarray(o):
+            for k, _ in o.__words__.items():
                 a = getattr(o, k, None)
                 if type(a) == list:
                     setattr(o, k, np.array(a))
+                elif a is None:
+                    setattr(o, k, None)
 
         s = Slope()
         c = False
@@ -67,15 +62,13 @@ class Slope:
                     c = False
                     o = s
                 elif ln == 'ENDSLOPE':
-                    __toarray(s)
                     break
                 elif ln == 'BEGINLAYER':
                     c = False
                     o = Layer()
-                    s.strata.append(o)
+                    s.__layers.append(o)
                 elif ln == 'ENDLAYER':
                     c = False
-                    __toarray(o)
                     o = s
                 elif ln == 'COMMENT':
                     c = True
@@ -97,4 +90,11 @@ class Slope:
                         a.append(v)
                     else:
                         setattr(o, k, v)
+
+        toarray(s)
+        for o in s.__layers:
+            toarray(o)
+        s.profile[:, 0] -= s.profile[0, 0]
+        n = s.profile.shape[0] - 1
+        s.span = s.profile[n, 0]
         return s
