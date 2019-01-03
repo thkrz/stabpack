@@ -74,6 +74,8 @@ class Slope:
                 elif ln.lower() in d.keys():
                     c = False
                     k = ln.lower()
+                elif ln == 'ASSUME':
+                    print(k)
                 elif not c:
                     v = ln.split()
                     for i, e in enumerate(v):

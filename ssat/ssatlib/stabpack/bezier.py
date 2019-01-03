@@ -3,7 +3,7 @@ import numpy as np
 from scipy.special import binom
 
 
-def asarc(start, end):
+def asarc3(start, end):
     start = np.asarray(start)
     end = np.asarray(end)
 

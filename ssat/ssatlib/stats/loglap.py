@@ -35,7 +35,7 @@ def fit(xp, fp):
         g['b'] = b
         return cdf(x)
 
-    def grad(x, d, a, b):
+    def g(x, d, a, b):
         y = np.zeros((x.size, 3))
         mask = x < d
         c = (x[mask] / d)**b
@@ -50,7 +50,7 @@ def fit(xp, fp):
         y[mask, 2] = -a * c / (a + b)**2
         return y
 
-    popt, pcov = curve_fit(f, xp, fp, p0=np.ones(3), jac=grad)
+    popt, pcov = curve_fit(f, xp, fp, p0=np.ones(3), jac=g)
     return stats.rmse(fp, cdf(xp))
 
 
