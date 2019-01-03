@@ -5,7 +5,7 @@ cfg = {
     'DATAFILE': '',
     'PARADX': 1.0,
     'MINLEN': 2.0,
-    'RANK': 3
+    'DEGREE': 3
 }
 
 

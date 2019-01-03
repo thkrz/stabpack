@@ -1,5 +1,5 @@
 SUFFIX = $(shell python3-config --extension-suffix)
-SRC = bezier.f90
+SRC = fmin.f90
 OBJ = ${SRC:.f90=${SUFFIX}}
 
 %${SUFFIX}: %.f90

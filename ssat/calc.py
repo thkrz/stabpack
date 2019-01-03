@@ -10,40 +10,40 @@ from ssat.ssatlib.data import Slope
 from ssat.ssatlib.stabpack import bezier
 
 result = Queue()
-# slope = Slope.load(cfg['DATAFILE'])
-step = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
+slope = None
 
-
-def initial_values():
-    import matplotlib.path as mpath
-    import matplotlib.patches as mpatches
-    import matplotlib.pyplot as plt
-
-    a = np.array([0, 0])
-    b = np.array([10, 5])
-    p = bezier.line(a, b)
-    t = np.linspace(0, 1)
-    s = bezier.curve(t, p)
-    plt.plot(s[:, 0], s[:, 1])
-    plt.scatter(p[:, 0], p[:, 1])
-    plt.show()
-
-
-def calc(ctrl_points):
+def __calc(k):
     result.put('Test')
 
 
-def main():
+def initial_values():
+    step = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
     if step == 0:
-        return -1
-    ctrl_points = initial_values()
-    return 0
+        return None
+    x = np.arange(0, 30, step=cfg['PARADX'])
+    y = np.ones(x.size)
+    n = x.size
+    iv = []
+    for i in range(n):
+        for j in range(i + step, n):
+            iv.append(bezier.asarc((x[i], y[i]), (x[j], y[j])))
+            iv.append(bezier.asline((x[i], y[i]), (x[j], y[j])))
+    return iv
 
+
+def calc(chunk):
+    for k in chunk:
+        __calc(k)
+
+
+def main():
     num_threads = len(os.sched_getaffinity(0))
     threads = []
-    payload = np.array_split(ctrl_points, num_threads)
+    chunks = np.array_split(initial_values(), num_threads)
+    print(chunks)
+    return 0
     for i in range(num_threads):
-        t = Thread(target=calc, args=(payload[i], ))
+        t = Thread(target=calc, args=(chunks[i], ))
         t.start()
         threads.append(t)
     for t in threads:
