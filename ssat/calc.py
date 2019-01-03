@@ -10,25 +10,25 @@ from ssat.ssatlib.data import Slope
 from ssat.ssatlib.stabpack import bezier
 
 result = Queue()
-slope = None
+
 
 def __calc(k):
     result.put('Test')
 
 
 def initial_values():
-    step = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
-    if step == 0:
+    off = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
+    if off == 0:
         return None
     x = np.arange(0, 30, step=cfg['PARADX'])
     y = np.ones(x.size)
     n = x.size
-    iv = []
+    v = []
     for i in range(n):
-        for j in range(i + step, n):
-            iv.append(bezier.asarc((x[i], y[i]), (x[j], y[j])))
-            iv.append(bezier.asline((x[i], y[i]), (x[j], y[j])))
-    return iv
+        for j in range(i + off, n):
+            v.append(bezier.asarc3((x[i], y[i]), (x[j], y[j])))
+            v.append(bezier.asline((x[i], y[i]), (x[j], y[j])))
+    return np.asarray(v)
 
 
 def calc(chunk):
@@ -37,11 +37,12 @@ def calc(chunk):
 
 
 def main():
+    interp = initial_values()
+    if interp is None:
+        return -1
     num_threads = len(os.sched_getaffinity(0))
     threads = []
-    chunks = np.array_split(initial_values(), num_threads)
-    print(chunks)
-    return 0
+    chunks = np.array_split(interp, num_threads)
     for i in range(num_threads):
         t = Thread(target=calc, args=(chunks[i], ))
         t.start()
