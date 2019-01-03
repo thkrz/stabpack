@@ -20,15 +20,13 @@ def initial_values():
     import matplotlib.pyplot as plt
 
     a = np.array([0, 0])
-    b = np.array([10, 0])
-    p = bezier.arc(a, b, depth=2.0)
+    b = np.array([10, 5])
+    p = bezier.line(a, b)
     t = np.linspace(0, 1)
-    s = bezier.bezier(t, p)
-
-    print(p)
-    print(s)
-    #plt.plot(s[:, 0], s[:, 1])
-    #plt.show()
+    s = bezier.curve(t, p)
+    plt.plot(s[:, 0], s[:, 1])
+    plt.scatter(p[:, 0], p[:, 1])
+    plt.show()
 
 
 def calc(ctrl_points):

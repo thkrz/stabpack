@@ -3,21 +3,31 @@ import numpy as np
 from scipy.special import binom
 
 
-def arc(start, end, depth=None, rank=3):
-    kappa = 4. / 3. * (np.sqrt(2.) - 1.)
+def arc(start, end, depth=None, degree=3):
     d = np.linalg.norm(start - end)
+    c = .5 * (start + end)
+    print(c)
+    exit(0)
+
+    # kappa = 4. / 3. * (np.sqrt(2.) - 1.)
+    kappa = .5522847498
     if depth:
         R = depth * .5 + d**2 / (8. * depth)
         phi = np.arccos(1. - depth / R)
     else:
         R = .5 * d
-        phi = .5 * np.pi
-    m = int(.5 * (rank + 1))
-    k = np.zeros((rank + 1, 2))
+        phi = .25 * np.pi
+    m = int(.5 * (degree + 1))
+    k = np.zeros((degree + 1, 2))
     k[:m, :] = start
     k[m:, :] = end
-    k[1:rank, 0] += kappa * R * np.sin(phi)
-    k[1:rank, 1] -= kappa * R * np.cos(phi)
+    sink = kappa * R * np.sin(phi)
+    cosk = kappa * R * np.cos(phi)
+    k[1:m, 0] += cosk
+    k[1:m, 1] -= sink
+    k[m:degree, 0] += cosk
+    k[m:degree, 1] -= sink
+    print(k)
     return k
 
 
@@ -32,9 +42,9 @@ def curve(t, k):
         t = t[None]
         scalar_input = True
 
-    n, m = k.shape
-    b = np.zeros((t.size, m))
-    for i in range(n):
+    n = k.shape[0] - 1
+    b = np.zeros((t.size, k.shape[1]))
+    for i in range(n + 1):
         b += np.outer(B(t, n, i), k[i])
 
     if scalar_input:
@@ -42,8 +52,11 @@ def curve(t, k):
     return b
 
 
-def line(start, end, rank=3):
-    pass
+def line(start, end, degree=3):
+    n = degree + 1
+    t = np.linspace(0, 1, num=n)
+    return start + np.outer(t, end - start)
+
 
 def surface(u, v, k):
     n, m = k.shape
