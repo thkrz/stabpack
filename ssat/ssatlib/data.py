@@ -1,84 +1,102 @@
 import numpy as np
 
+from ssat.ssatlib.constants import G
+
+# def zc(c, phi, gamma):
+#     2. * c / gamma * np.tan(np.radians(45. + .5 * phi))
+
+
+def asarray(obj, rank, dtype):
+    if len(obj) == 0:
+        return None
+    if rank < 2:
+        obj = obj[0]
+    if rank < 1:
+        obj = obj[0]
+    if dtype == str:
+        return obj
+    return np.asarray(obj).astype(dtype)
+
 
 class Layer:
-    __words__ = {
-        'bulk_density': False,
-        'cohesion': False,
-        'friction_angle': False,
-        'grain_size_distribution': True,
-        'hydraulic_conductivity': False,
-        'name': False,
-        'particle_density': False,
-        'poissons_ratio': False,
-        'porosity': False,
-        'retention_model': False,
-        'thickness': False,
-        'water_content': False,
-        'youngs_modulus': False
-    }
+    def unit_weight(self):
+        return self.bulk_density * G
 
 
 class Slope:
-    __words__ = {
-        'cracks': True,
-        'dip': False,
-        'outcrop': False,
-        'profile': True
-    }
-
-    def __init__(self, dim=2):
+    def __init__(self, name, dim=2):
         self.__dim = dim
         self.__layers = []
 
-    def dump(self):
-        print('BEGINSLOPE')
-        print('ENDSLOPE')
-
-    def top(self, x):
-        if self.__dim == 2:
-            return np.interp(x, self.profile[:, 0], self.profile[:, 1])
-        return None
-
-    @staticmethod
-    def load(name):
-        s = {(k, []) for k in ['cracks', 'dip', 'outcrop', 'profile']}
-        l = {(k, [])
-             for k in [
-                 'bulk_density', 'cohesion', 'friction_angle',
-                 'grain_size_distribution', 'hydraulic_conductivity', 'name',
-                 'particle_density', 'poissons_ratio', 'porosity',
-                 'retention_model', 'thickness', 'water_content',
-                 'youngs_modulus'
-             ]}
-        lyr = []
-        c = False
+        s = [{
+            'cracks': ([], 2, np.float),
+            'dip': ([], 1, np.float),
+            'outcrop': ([], 1, np.float),
+            'profile': ([], 2, np.float)
+        }, {
+            'bulk_density': ([], 0, np.float),
+            'cohesion': ([], 0, np.float),
+            'friction_angle': ([], 0, np.float),
+            'grain_sizes': ([], 2, np.float),
+            'hydraulic_conductivity': ([], 0, np.float),
+            'name': ([], 0, str),
+            'particle_density': ([], 0, np.float),
+            'poissons_ratio': ([], 0, np.float),
+            'porosity': ([], 0, np.float),
+            'retention_model': ([], 1, np.float),
+            'thickness': ([], 0, np.float),
+            'water_content': ([], 0, np.float),
+            'youngs_modulus': ([], 0, np.float)
+        }]
         d, k = None, None
         with open(name) as dat:
             for ln in dat:
                 ln = ln.strip()
+                if not ln:
+                    continue
                 if ln == 'BEGINSLOPE':
-                    c = False
-                    d = s
+                    d = s[0]
                 elif ln == 'ENDSLOPE':
                     break
                 elif ln == 'BEGINLAYER':
-                    c = False
-                    d = l.copy()
-                    lyr.append(d)
+                    d = s[-1]
+                    s.append(d.copy())
                 elif ln == 'ENDLAYER':
-                    c = False
-                    d = s
+                    d = s[0]
                 elif ln == 'COMMENT':
-                    c = True
+                    k = ln
                 elif ln.lower() in d.keys():
-                    c = False
                     k = ln.lower()
-                elif ln == 'ASSUME':
-                    print(k)
-                elif not c:
-                    v = ln.split()
-                    for i, e in enumerate(v):
-                        if e.isdigit():
-                            v[i] = float(e)
-                    d[k].append(v)
+                elif k != 'COMMENT':
+                    d[k][0].append(ln.split())
+
+        for k, v in s[0].items():
+            setattr(self, k, asarray(*v))
+
+        for d in s[1:-1]:
+            obj = Layer()
+            self.__layers.append(obj)
+            for k, v in d.items():
+                setattr(obj, k, asarray(*v))
+
+        if self.cracks:
+            r = []
+            for xy in self.cracks:
+                lyr = self[xy]
+                z = self.top(xy)
+                h = 2. * lyr.cohesion / lyr.unit_weight() * np.tan(
+                    np.radians(45. + .5 * lyr.friction_angle))
+                r.append(np.array(xy.tolist() + [z - h]))
+            self.cracks = np.asarray(r)
+        if self.outcrop:
+            self.outcrop = np.array(self.outcrop.tolist() +
+                                    [self.top(outcrop)])
+
+        for layer in self.__layers:
+            if layer.particle_density is None:
+                layer.particle_density = 2.65
+            if layer.grain_sizes:
+                if layer.porosity is None:
+                    pass
+                if layer.retention_model is None:
+                    pass

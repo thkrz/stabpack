@@ -37,6 +37,8 @@ def calc(chunk):
 
 
 def main():
+    s = Slope(cfg['DATAFILE'], dim=cfg['DIMENSION'])
+    return 0
     interp = initial_values()
     if interp is None:
         return -1
