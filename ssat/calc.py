@@ -10,6 +10,7 @@ from ssat.ssatlib.data import Slope
 from ssat.ssatlib.stabpack import bezier
 
 result = Queue()
+slope = None
 
 
 def __calc(k):
@@ -20,8 +21,8 @@ def initial_values():
     off = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
     if off == 0:
         return None
-    x = np.arange(0, 30, step=cfg['PARADX'])
-    y = np.ones(x.size)
+    x = np.arange(0, slope.span, step=cfg['PARADX'])
+    y = slope.top(x)
     n = x.size
     v = []
     for i in range(n):
@@ -37,8 +38,9 @@ def calc(chunk):
 
 
 def main():
-    s = Slope(cfg['DATAFILE'], dim=cfg['DIMENSION'])
-    return 0
+    global slope
+
+    slope = Slope(cfg['DATAFILE'], dim=cfg['DIMENSION'])
     interp = initial_values()
     if interp is None:
         return -1

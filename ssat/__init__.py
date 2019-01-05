@@ -3,6 +3,7 @@ import sys
 cfg = {
     'DIMENSION': 2,
     'DATAFILE': '',
+    'PRECIPITATION': '',
     'PARADX': 1.0,
     'MINLEN': 2.0,
     'DEGREE': 3
