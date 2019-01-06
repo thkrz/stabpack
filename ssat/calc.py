@@ -10,19 +10,18 @@ from ssat.ssatlib.data import Slope
 from ssat.ssatlib.stabpack import bezier
 
 result = Queue()
-slope = None
 
 
-def __calc(k):
+def __calc(k, slope):
     result.put('Test')
 
 
-def initial_values():
+def initial_values(s):
     off = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
     if off == 0:
         return None
-    x = np.arange(0, slope.span, step=cfg['PARADX'])
-    y = slope.top(x)
+    x = np.arange(0, s.span, step=cfg['PARADX'])
+    y = s.top(x)
     n = x.size
     v = []
     for i in range(n):
@@ -32,23 +31,21 @@ def initial_values():
     return np.asarray(v)
 
 
-def calc(chunk):
+def calc(chunk, slope):
     for k in chunk:
-        __calc(k)
+        __calc(k, slope)
 
 
 def main():
-    global slope
-
     slope = Slope(cfg['DATAFILE'], dim=cfg['DIMENSION'])
-    interp = initial_values()
-    if interp is None:
+    ival = initial_values(slope)
+    if ival is None:
         return -1
     num_threads = len(os.sched_getaffinity(0))
     threads = []
-    chunks = np.array_split(interp, num_threads)
+    chunks = np.array_split(ival, num_threads)
     for i in range(num_threads):
-        t = Thread(target=calc, args=(chunks[i], ))
+        t = Thread(target=calc, args=(chunks[i], slope))
         t.start()
         threads.append(t)
     for t in threads:
