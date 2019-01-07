@@ -15,14 +15,13 @@ from ssat.ssatlib.stabpack import bezier, mos
 result = Queue()
 
 
-def __calc(k, s):
+def __calc(k, iscrack, s):
     dim = cfg['DIMENSION']
     n = cfg['DEGREE']
     F = cfg['FOS']
-    maxssi = cfg['MAXSSI']
+    maxmu = cfg['MAXMU']
     maxdepth = np.linalg.norm(k[0, :] - k[n, :]) * cfg['MAXDEPTH']
     t = np.linspace(0, 1, num=cfg['NPARAM'])
-    swap = k[0, 1] < k[n, 1]
 
     # Spaghetti code ^ 3
     # TODO: u and gamma, crest/cracks
@@ -31,7 +30,7 @@ def __calc(k, s):
         u, v = np.hsplit(bezier.curve(k, t), 2)
         y = s.top(u)
         if not all(0 < y - v < maxdepth) or any(u[1:] - u[:u.size - 1] < 0):
-            return maxssi
+            return maxmu
         slices = []
         for i in range(u.size - 1):
             b = u[i + 1] - u[i]
@@ -41,21 +40,19 @@ def __calc(k, s):
             h = np.abs((y[i] - v[i], y[i + 1] - v[i + 1]))
             layer = s.stratum((mx, my))
             c = layer.c
-            gamma = s.gamma()
+            gamma = s.gamma((mx, my))
             phi = layer.phi
             u = layer.u(my)
             slices.append(mos.Slice(alpha, b, c, gamma, h, phi, u))
-        if swap:
-            slices = list(reversed(slices))
-        return mos.razdolsky(slices, F=F)
+        return np.minimum(maxmu, mos.razdolsky(slices, F=F))
 
     p0 = k[1:n, :]
     mu = minimize(f, np.reshape(p0, p0.size), method='Nelder-Mead')
     if mu < 1.0:
-        result.put(k)
+        result.put((mu, k))
 
 
-def initial_values(s):
+def initial_values(s, num):
     off = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
     if off == 0:
         return None
@@ -64,25 +61,32 @@ def initial_values(s):
     n = x.size
     v = []
     for i in range(n):
+        iscrack = s.iscrack(x[i])
+        lyr = s.stratum((x[i], y[i]))
+        y[i] -= lyr.depth()
         for j in range(i + off, n):
-            v.append(bezier.asarc3((x[i], y[i]), (x[j], y[j])))
-            v.append(bezier.asline((x[i], y[i]), (x[j], y[j])))
-    return np.asarray(v)
+            alpha = np.arctan((y[j] - y[i]) / (x[j] - x[i]))
+            if np.degrees(alpha) < cfg['MINDESC']:
+                continue
+            k = bezier.asarc3((x[i], y[i]), (x[j], y[j]))
+            v.append((k, iscrack))
+            k = bezier.asline((x[i], y[i]), (x[j], y[j]))
+            v.append((k, iscrack))
+    return (v[i:i + num] for i in range(0, len(v), num))
 
 
 def calc(chunk, s):
-    for k in chunk:
-        __calc(k, s)
+    for k, iscrack in chunk:
+        __calc(k, iscrack, s)
 
 
 def main():
-    slope = Slope(cfg['DATAFILE'], dim=cfg['DIMENSION'])
-    ival = initial_values(slope)
-    if ival is None:
-        return -1
     num_threads = len(os.sched_getaffinity(0))
+    slope = Slope(cfg['DATAFILE'], dim=cfg['DIMENSION'])
+    chunks = initial_values(slope, num_threads)
+    if chunks is None:
+        return -1
     threads = []
-    chunks = np.array_split(ival, num_threads)
     for i in range(num_threads):
         t = Thread(target=calc, args=(chunks[i], slope))
         t.start()

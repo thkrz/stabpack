@@ -52,9 +52,11 @@ class Slope:
         self.b = self.top(self.a)
         self.m = np.arctan(self.alpha)
 
-        self.omega[:, 0] -= self.omega[0, 0]
         n = self.omega.shape[0] - 1
         self.span = self.omega[n, 0]
+        if self.omega[n, 1] > np.mean(self.omega[:, 1]):
+            self.omega = self.omega[::-1, :]
+            self.omega[:, 0] = self.span - self.omega[:, 0]
 
     def __parse__(self, name):
         c = False

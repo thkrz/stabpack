@@ -3,8 +3,13 @@ import sys
 cfg = {
     'DIMENSION': 2,
     'DATAFILE': '',
+    'FOS': 1.3,
+    'MAXMU': 2.0,
     'PRECIPITATION': '',
     'PARADX': 1.0,
+    'NPARAM': 100,
+    'MAXDEPTH': 0.3,
+    'MINDESC': 10.0,
     'MINLEN': 2.0,
     'DEGREE': 3
 }
