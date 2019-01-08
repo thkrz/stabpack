@@ -44,8 +44,9 @@ class Stratum:
 
 
 class Slope:
-    def __init__(self, name, dim=2):
-        self.__dim = dim
+    def __init__(self, name, dim=2, cr=.4):
+        self.dim = dim
+
         self.__strata = []
         self.__parse__(name)
 
@@ -57,6 +58,15 @@ class Slope:
         if self.omega[n, 1] > np.mean(self.omega[:, 1]):
             self.omega = self.omega[::-1, :]
             self.omega[:, 0] = self.span - self.omega[:, 0]
+
+        for i, S in enumerate(self.__strata):
+            if S.name != 'DEBRIS':
+                break
+            if i == 0:
+                omega = self.omega
+            else:
+                omega = self.__strata[i - 1].omega
+            S.omega = self.__runoff__(omega, S.h, cr)
 
     def __parse__(self, name):
         c = False
@@ -103,6 +113,35 @@ class Slope:
                             setattr(o, w[k], v)
                             v = []
                 ln = peek
+
+    def __runoff__(self, omega, x, cr):
+        def velocity(arr):
+            n = arr.shape[0]
+            v = np.zeros(n)
+            for i in range(n - 1):
+                j = i + 1
+                x0 = arr[i]
+                x1 = arr[j]
+                alpha = np.arctan((x0[1] - x1[1]) / (x1[0] - x0[0]))
+                a = G * (np.sin(alpha) - np.cos(alpha) * cr)
+                s = np.linalg.norm(x1 - x0)
+                p = 2. * v[i] / a
+                q = -2. * s / a
+                det = (p / 2.)**2 - q
+                if det < 0:
+                    v[j] = 0.0
+                else:
+                    t1 = -p / 2. + np.sqrt(det)
+                    t2 = -p / 2. - np.sqrt(det)
+                    t = np.maximum(t1, t2)
+                    v[j] = t * a + v[i]
+            return v
+
+        v = velocity(omega) + velocity(omega[::-1])
+        v /= np.amax(v)
+        d = np.zeros_like(omega)
+        d[:, 1] = (x[0] - x[1]) * v + x[1]
+        return omega - d
 
     def bottoms(self, x):
         b = self.b
