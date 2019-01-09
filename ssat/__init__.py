@@ -3,6 +3,7 @@ import sys
 cfg = {
     'DIMENSION': 2,
     'DATAFILE': '',
+    'CRR': 0.2,
     'FOS': 1.3,
     'MAXMU': 2.0,
     'PRECIPITATION': '',
