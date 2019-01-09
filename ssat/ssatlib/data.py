@@ -34,6 +34,61 @@ KEYWORDS = [{
 WORDS = list(chain.from_iterable([w.keys() for w in KEYWORDS]))
 
 
+class Profile:
+    def __getitem__(self, x):
+        return np.interp(x, self.x, self.y)
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        if x.size != y.size:
+            raise ValueError
+        self.n = x.size
+        if self.y[self.n - 1] > np.mean(self.y):
+            self.mirror()
+
+    def __len__(self):
+        return self.x[self.n - 1]
+
+    def __velocity(self, cr):
+        v = np.zeros(self.n)
+        for i in range(self.n - 1):
+            j = i + 1
+            x0 = (self.x[i], self.y[i])
+            x1 = (self.x[j], self.y[j])
+            alpha = np.arctan((x0[1] - x1[1]) / (x1[0] - x0[0]))
+            a = G * (np.sin(alpha) - np.cos(alpha) * cr)
+            s = np.linalg.norm(x1 - x0)
+            p = 2. * v[i] / a
+            q = -2. * s / a
+            det = (p / 2.)**2 - q
+            if det >= 0:
+                t1 = -p / 2. + np.sqrt(det)
+                t2 = -p / 2. - np.sqrt(det)
+                if t1 < 0:
+                    t = t2
+                elif t2 < 0:
+                    t = t1
+                elif t1 > 0 and t2 > 0:
+                    t = np.minimum(t1, t2)
+                else:
+                    t = 0.0
+                v[j] = t * a + v[i]
+        return v
+
+    def mirror(self):
+        xmax = self.x[self.n - 1]
+        self.x = xmax - self.x[::-1]
+        self.y = self.y[::-1]
+
+    def velocity(self, cr):
+        v = self.__velocity(cr)
+        self.mirror()
+        v += self.__velocity(cr)
+        self.mirror()
+        return v
+
+
 class Stratum:
     def depth(self):
         return 2. * self.c / self.gamma() * np.tan(
@@ -44,31 +99,28 @@ class Stratum:
 
 
 class Slope:
-    def __init__(self, name, dim=2, cr=.4):
+    def __init__(self, name, dim=2, cr=.2):
         self.dim = dim
 
         self.__strata = []
-        self.__parse__(name)
+        self.__parse(name)
 
         self.b = self.top(self.a)
         self.m = np.arctan(self.alpha)
 
-        n = self.omega.shape[0] - 1
-        self.span = self.omega[n, 0]
-        if self.omega[n, 1] > np.mean(self.omega[:, 1]):
-            self.omega = self.omega[::-1, :]
-            self.omega[:, 0] = self.span - self.omega[:, 0]
+        self.omega = Profile(self.omega[:, 0], self.omega[:, 1])
+        self.span = len(self.omega)
 
-        for i, S in enumerate(self.__strata):
+        top = self.omega
+        for S in self.__strata:
             if S.name != 'DEBRIS':
                 break
-            if i == 0:
-                omega = self.omega
-            else:
-                omega = self.__strata[i - 1].omega
-            S.omega = self.__runoff__(omega, S.h, cr)
+            v = top.velocity(cr)
+            d = (S.h[1] - S.h[0]) * (v / np.amax(v)) + S.h[0]
+            S.omega = Profile(self.omega.x, top.y - d)
+            top = S.omega
 
-    def __parse__(self, name):
+    def __parse(self, name):
         c = False
         eof = False
         k, o = None, None
@@ -114,40 +166,15 @@ class Slope:
                             v = []
                 ln = peek
 
-    def __runoff__(self, omega, x, cr):
-        def velocity(arr):
-            n = arr.shape[0]
-            v = np.zeros(n)
-            for i in range(n - 1):
-                j = i + 1
-                x0 = arr[i]
-                x1 = arr[j]
-                alpha = np.arctan((x0[1] - x1[1]) / (x1[0] - x0[0]))
-                a = G * (np.sin(alpha) - np.cos(alpha) * cr)
-                s = np.linalg.norm(x1 - x0)
-                p = 2. * v[i] / a
-                q = -2. * s / a
-                det = (p / 2.)**2 - q
-                if det < 0:
-                    v[j] = 0.0
-                else:
-                    t1 = -p / 2. + np.sqrt(det)
-                    t2 = -p / 2. - np.sqrt(det)
-                    t = np.maximum(t1, t2)
-                    v[j] = t * a + v[i]
-            return v
-
-        v = velocity(omega) + velocity(omega[::-1])
-        v /= np.amax(v)
-        d = np.zeros_like(omega)
-        d[:, 1] = (x[0] - x[1]) * v + x[1]
-        return omega - d
-
     def bottoms(self, x):
         b = self.b
         for s in self.__strata:
-            b -= s.h
-            yield x * self.m + self.b
+            if s.name == 'DEBRIS':
+                y = s.omega[x]
+            else:
+                b -= s.h
+                y = x * self.m + self.b
+            yield y
 
     def iscrack(self, x, eps):
         for crack in self.cracks:
@@ -168,4 +195,4 @@ class Slope:
         return None
 
     def top(self, x):
-        return np.interp(x, self.omega[:, 0], self.omega[:, 1])
+        return self.omega[x]
