@@ -203,20 +203,15 @@ class Slope:
                     return s
         elif type(x) == int:
             return self.__strata[x]
-        for y in self.bottoms(x[0]):
+        for i, y in enumerate(self.bottoms(x[0])):
             if x[1] > y:
-                return s
+                return self.__strata[i]
         return None
 
     def top(self, x, relief=True):
         if relief:
             return self.omega.top(x)
-        stratum = None
-        for s in self.__strata:
+        for s in self.__strata[::-1]:
             if s.isdebris():
-                stratum = s
-            else:
-                break
-        if stratum:
-            return stratum.omega.top(x)
+                return s.omega.top(x)
         return None
