@@ -15,7 +15,7 @@ KEYWORDS = [{
     "DIP": "alpha",
     "OUTCROP": "a",
     "PROFILE": "omega",
-    "UNCONFORMITIES": "shifts"
+    "FAULTS": "faults"
 }, {
     "BULK_DENSITY": "rho_b",
     "COHESION": "c",
@@ -46,12 +46,20 @@ class Profile:
 
     def __velocity(self, cr):
         v = np.zeros(self.n)
+        threshold = .5 * np.pi
         for i in range(self.n - 1):
             j = i + 1
             x0 = np.asarray((self.x[i], self.y[i]))
             x1 = np.asarray((self.x[j], self.y[j]))
-            alpha = np.arctan((x0[1] - x1[1]) / (x1[0] - x0[0]))
+            dy = x0[1] - x1[1]
+            alpha = np.arctan(dy / (x1[0] - x0[0]))
             a = G * (np.sin(alpha) - np.cos(alpha) * cr)
+            if a == 0:
+                v[j] = v[i]
+                continue
+            if alpha > threshold or a / G > .6:
+                v[j] = np.sqrt(2. * G * np.abs(dy)) + v[i]
+                continue
             s = np.linalg.norm(x1 - x0)
             p = 2. * v[i] / a
             q = -2. * s / a
@@ -59,9 +67,9 @@ class Profile:
             if det >= 0:
                 t1 = -p / 2. + np.sqrt(det)
                 t2 = -p / 2. - np.sqrt(det)
-                if t1 < 0:
+                if t1 < 0 and t2 > 0:
                     t = t2
-                elif t2 < 0:
+                elif t2 < 0 and t1 > 0:
                     t = t1
                 elif t1 > 0 and t2 > 0:
                     t = np.minimum(t1, t2)
@@ -78,7 +86,7 @@ class Profile:
     def span(self):
         return self.x[self.n - 1]
 
-    def top(self, x):
+    def interp(self, x):
         return np.interp(x, self.x, self.y)
 
     def velocity(self, cr):
@@ -111,17 +119,17 @@ class Slope:
         self.omega = Profile(self.omega[:, 0], self.omega[:, 1])
         self.span = self.omega.span()
 
-        self.b = self.top(self.a)
-        self.m = np.arctan(self.alpha)
-
         top = self.omega
         for s in self.__strata:
             if not s.isdebris():
                 break
             v = top.velocity(cr)
             d = (s.h[1] - s.h[0]) * (v / np.amax(v)) + s.h[0]
-            s.omega = Profile(self.omega.x, top.y - d)
-            top = s.omega
+            s.bottom = Profile(self.omega.x, top.y - d)
+            top = s.bottom
+
+        self.b = self.top(self.a, relief=False)
+        self.m = np.arctan(self.alpha)
 
     def __iter__(self):
         self.__curr = 0
@@ -184,7 +192,7 @@ class Slope:
         b = self.b
         for s in self.__strata:
             if s.isdebris():
-                y = s.omega.top(x)
+                y = s.bottom.interp(x)
             else:
                 b -= s.h
                 y = x * self.m + self.b
@@ -209,9 +217,8 @@ class Slope:
         return None
 
     def top(self, x, relief=True):
-        if relief:
-            return self.omega.top(x)
-        for s in self.__strata[::-1]:
-            if s.isdebris():
-                return s.omega.top(x)
-        return None
+        if not relief:
+            for s in self.__strata[::-1]:
+                if s.isdebris():
+                    return s.bottom.interp(x)
+        return self.omega.interp(x)
