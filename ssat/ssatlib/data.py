@@ -45,8 +45,8 @@ class Profile:
             self.mirror()
 
     def __velocity(self, cr):
-        v = np.zeros(self.n)
         threshold = .5 * np.pi
+        v = np.zeros(self.n)
         for i in range(self.n - 1):
             j = i + 1
             x0 = np.asarray((self.x[i], self.y[i]))
@@ -54,11 +54,11 @@ class Profile:
             dy = x0[1] - x1[1]
             alpha = np.arctan(dy / (x1[0] - x0[0]))
             a = G * (np.sin(alpha) - np.cos(alpha) * cr)
+            if alpha > threshold or a / G > .6:
+                v[j] = np.sqrt(2. * G * np.abs(dy)) + v[i] * np.sin(alpha)
+                continue
             if a == 0:
                 v[j] = v[i]
-                continue
-            if alpha > threshold or a / G > .6:
-                v[j] = np.sqrt(2. * G * np.abs(dy)) + v[i]
                 continue
             s = np.linalg.norm(x1 - x0)
             p = 2. * v[i] / a
