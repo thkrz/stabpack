@@ -198,6 +198,23 @@ class Slope:
                 y = x * self.m + self.b
             yield y
 
+    def gamma(self, x):
+        h = self.omega.interp(x[0])
+        parts = []
+        rho = []
+        for i, y in enumerate(self.bottoms()):
+            if x[1] > y:
+                break
+            h -= y
+            parts.append(h)
+            rho.append(slef.__strata[i].rho_b)
+        if i < len(self.__strata):
+            parts.append(y - x[1])
+            rho.append(slef.__strata[i].rho_b)
+        parts = np.asarray(parts)
+        rho = np.asarray(rho)
+        return ((parts / parts.sum()) * rho).sum()
+
     def iscrack(self, x, eps):
         for crack in np.asarray(self.cracks):
             if np.abs(x - crack) < eps:
