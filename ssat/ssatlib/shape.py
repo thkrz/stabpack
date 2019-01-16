@@ -13,18 +13,19 @@ class Boundary:
     def __len__(self):
         return int(np.round(self.span[1]))
 
-    def interp(self, x):
-        return np.interp(x, self.x, self.y)
-
-    def vdist(self, mu):
+    def __vdist(self, mu, forward):
         threshold = .5 * np.pi
         v = np.zeros(self.n)
         for i in range(self.n - 1):
             j = i + 1
-            x0 = np.asarray((self.x[i], self.y[i]))
-            x1 = np.asarray((self.x[j], self.y[j]))
+            k = i if forward else self.n - 1 - i
+            l = j if forward else k - 1
+            x0 = np.asarray((self.x[k], self.y[l]))
+            x1 = np.asarray((self.x[k], self.y[l]))
             dy = x0[1] - x1[1]
-            alpha = np.arctan(dy / (x1[0] - x0[0]))
+            if forward:
+                dy = -dy
+            alpha = np.arctan(dy / np.abs(x1[0] - x0[0]))
             a = G * (np.sin(alpha) - np.cos(alpha) * mu)
             if alpha > threshold or a / G > .6:
                 v[j] = np.sqrt(2. * G * np.abs(dy)) + v[i] * np.sin(alpha)
@@ -49,6 +50,12 @@ class Boundary:
                     t = 0.0
                 v[j] = t * a + v[i]
         return v
+
+    def interp(self, x):
+        return np.interp(x, self.x, self.y)
+
+    def vdist(self, mu):
+        return self.__vdist(mu, True) + self.__vdist(mu, False)
 
 
 class Edge:

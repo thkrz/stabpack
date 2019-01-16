@@ -65,9 +65,6 @@ class Slope:
         s = self.__strata[i]
         while s.isdebris():
             v = top.vdist(mu)
-            top.mirror()
-            v += top.vdist(mu)
-            top.mirror()
             vmax = np.amax(v)
             y = (s.h[1] - s.h[0]) * (v / vmax) + s.h[0]
             s.bottom = shape.Boundary(top.x, top.y - y)
