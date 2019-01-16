@@ -12,10 +12,12 @@ from ssat.ssatlib.constants import G
 from ssat.ssatlib.data import Slope
 from ssat.ssatlib.stabpack import bezier, mos
 
+import matplotlib.pyplot as plt
+
 result = Queue()
 
 
-def __calc(k, iscrack, s):
+def __calc(k, f0, s):
     dim = cfg['DIMENSION']
     n = cfg['DEGREE']
     F = cfg['FOS']
@@ -29,7 +31,8 @@ def __calc(k, iscrack, s):
         k[1:n, :] = x.reshape((n - 1, dim))
         u, v = np.hsplit(bezier.curve(k, t), 2)
         y = s.top(u)
-        if not all(0 < y - v < maxdepth) or any(u[1:] - u[:u.size - 1] < 0):
+        dy = y - v
+        if np.logical_or(dy < 0, dy > maxdepth).any() or np.any(u[1:] - u[:u.size - 1] < 0):
             return maxmu
         slices = []
         for i in range(u.size - 1):
@@ -44,7 +47,7 @@ def __calc(k, iscrack, s):
             phi = layer.phi
             u = layer.u(my)
             slices.append(mos.Slice(alpha, b, c, gamma, h, phi, u))
-        return np.minimum(maxmu, mos.razdolsky(slices, F=F))
+        return np.minimum(maxmu, mos.razdolsky(slices, crest=f0, F=F))
 
     p0 = k[1:n, :]
     mu = minimize(f, np.reshape(p0, p0.size), method='Nelder-Mead')
@@ -52,43 +55,52 @@ def __calc(k, iscrack, s):
         result.put((mu, k))
 
 
-def initial_values(s, num):
-    off = int(np.round(cfg['MINLEN'] / cfg['PARADX']))
+def boundary_values(s, num):
+    a = cfg['MINLEN']
+    beta = cfg['MINDESC']
+    dx = cfg['PARADX']
+    if a < dx or any([a < 0, beta < 0, dx < 0]):
+        raise ValueError
+
+    off = int(np.round(a / dx))
     if off == 0:
         return None
-    x = np.arange(0, s.span, step=cfg['PARADX'])
+    x = np.arange(*s.span, step=dx)
     y = s.top(x)
     n = x.size
-    v = []
+    b = []
+    eps = dx * .5
     for i in range(n):
-        iscrack = s.iscrack(x[i])
-        lyr = s.stratum((x[i], y[i]))
-        y[i] -= lyr.depth()
+        f0 = 0.0
+        if s.iscrack(x[i], eps):
+            l = s.stratum((x[i], y[i]))
+            h = l.depth()
+            print(h)
+            y[i] -= h
+            f0 = hydro.rho() * G * h
         for j in range(i + off, n):
-            alpha = np.arctan((y[j] - y[i]) / (x[j] - x[i]))
-            if np.degrees(alpha) < cfg['MINDESC']:
+            alpha = np.arctan((y[i] - y[j]) / (x[j] - x[i]))
+            if np.degrees(alpha) < beta:
                 continue
-            k = bezier.asarc3((x[i], y[i]), (x[j], y[j]))
-            v.append((k, iscrack))
-            k = bezier.asline((x[i], y[i]), (x[j], y[j]))
-            v.append((k, iscrack))
-    return (v[i:i + num] for i in range(0, len(v), num))
+            b.append(((x[i], y[i]), (x[j], y[j]), f0))
+    return np.array_split(np.asarray(b), num)
 
 
 def calc(chunk, s):
-    for k, iscrack in chunk:
-        __calc(k, iscrack, s)
+    for x0, x1, f0 in chunk:
+        __calc(bezier.asarc3(x0, x1), f0, s)
+        __calc(bezier.asline(x0, x1), f0, s)
 
 
 def main():
+    slope = Slope(cfg['DATAFILE'], cr=cfg['CRR'])
     num_threads = len(os.sched_getaffinity(0))
-    slope = Slope(cfg['DATAFILE'], dim=cfg['DIMENSION'])
-    chunks = initial_values(slope, num_threads)
+    chunks = boundary_values(slope, num_threads)
     if chunks is None:
         return -1
     threads = []
-    for i in range(num_threads):
-        t = Thread(target=calc, args=(chunks[i], slope))
+    for chunk in chunks:
+        t = Thread(target=calc, args=(chunk, slope))
         t.start()
         threads.append(t)
     for t in threads:

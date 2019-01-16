@@ -2,7 +2,7 @@ import numpy as np
 
 from itertools import chain
 
-from ssat.ssatlib.constants import G
+from ssat.ssatlib import shape
 
 KEYWORDS = [{
     "BEGINSLOPE": None,
@@ -11,11 +11,12 @@ KEYWORDS = [{
     "ENDLAYER": None,
     "COMMENT": None,
 }, {
+    "CALC_EXT": "span",
     "CRACKS": "cracks",
     "DIP": "alpha",
-    "OUTCROP": "a",
-    "PROFILE": "omega",
-    "FAULTS": "faults"
+    "FAULTS": "faults",
+    "OUTCROP": "o",
+    "PROFILE": "ridge"
 }, {
     "BULK_DENSITY": "rho_b",
     "COHESION": "c",
@@ -34,102 +35,51 @@ KEYWORDS = [{
 WORDS = list(chain.from_iterable([w.keys() for w in KEYWORDS]))
 
 
-class Profile:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        if x.size != y.size:
-            raise ValueError
-        self.n = x.size
-        if self.y[self.n - 1] > np.mean(self.y):
-            self.mirror()
+class Stratum(shape.Edge):
+    def __init__(self):
+        super().__init__(0, 0)
 
-    def __velocity(self, cr):
-        threshold = .5 * np.pi
-        v = np.zeros(self.n)
-        for i in range(self.n - 1):
-            j = i + 1
-            x0 = np.asarray((self.x[i], self.y[i]))
-            x1 = np.asarray((self.x[j], self.y[j]))
-            dy = x0[1] - x1[1]
-            alpha = np.arctan(dy / (x1[0] - x0[0]))
-            a = G * (np.sin(alpha) - np.cos(alpha) * cr)
-            if alpha > threshold or a / G > .6:
-                v[j] = np.sqrt(2. * G * np.abs(dy)) + v[i] * np.sin(alpha)
-                continue
-            if a == 0:
-                v[j] = v[i]
-                continue
-            s = np.linalg.norm(x1 - x0)
-            p = 2. * v[i] / a
-            q = -2. * s / a
-            det = (p / 2.)**2 - q
-            if det >= 0:
-                t1 = -p / 2. + np.sqrt(det)
-                t2 = -p / 2. - np.sqrt(det)
-                if t1 < 0 and t2 > 0:
-                    t = t2
-                elif t2 < 0 and t1 > 0:
-                    t = t1
-                elif t1 > 0 and t2 > 0:
-                    t = np.minimum(t1, t2)
-                else:
-                    t = 0.0
-                v[j] = t * a + v[i]
-        return v
-
-    def mirror(self):
-        xmax = self.x[self.n - 1]
-        self.x = xmax - self.x[::-1]
-        self.y = self.y[::-1]
-
-    def span(self):
-        return self.x[self.n - 1]
-
-    def interp(self, x):
-        return np.interp(x, self.x, self.y)
-
-    def velocity(self, cr):
-        v = self.__velocity(cr)
-        self.mirror()
-        v += self.__velocity(cr)
-        self.mirror()
-        return v
-
-
-class Stratum:
-    def depth(self):
+    def fissure_depth(self):
         return 2. * self.c / self.gamma() * np.tan(
             np.radians(45. + .5 * self.phi))
-
-    def gamma(self):
-        return self.rho_b * G
 
     def isdebris(self):
         return self.name == 'DEBRIS'
 
 
 class Slope:
-    def __init__(self, name, dim=2, cr=.2):
+    def __init__(self, name, mu, dim=2):
         self.dim = dim
 
         self.__strata = []
         self.__parse(name)
 
-        self.omega = Profile(self.omega[:, 0], self.omega[:, 1])
-        self.span = self.omega.span()
+        self.ridge = shape.Boundary(self.ridge[:, 0], self.ridge[:, 1])
+        if not hasattr(self.span):
+            self.span = self.ridge.span
+        if hasattr(self.cracks):
+            self.cracks = np.atleast_1d(self.cracks)
 
-        top = self.omega
-        for s in self.__strata:
-            if not s.isdebris():
-                break
-            v = top.velocity(cr)
-            d = (s.h[1] - s.h[0]) * (v / np.amax(v)) + s.h[0]
-            s.bottom = Profile(self.omega.x, top.y - d)
+        top = self.ridge
+        i = 0
+        s = self.__strata[i]
+        while s.isdebris():
+            v = top.vdist(mu)
+            top.mirror()
+            v += top.vdist(mu)
+            top.mirror()
+            vmax = np.amax(v)
+            y = (s.h[1] - s.h[0]) * (v / vmax) + s.h[0]
+            s.bottom = shape.Boundary(top.x, top.y - y)
             top = s.bottom
-
-        self.b = self.top(self.a, relief=False)
-        self.m = np.arctan(self.alpha)
+            i += 1
+            s = self.__strata[i]
+        b = self.top(self.o)
+        m = np.arctan(np.radians(self.alpha))
+        for s in self.__strata[i:]:
+            s.m = m
+            s.b = b - s.h
+            b = s.b
 
     def __iter__(self):
         self.__curr = 0
@@ -188,54 +138,5 @@ class Slope:
                             v = []
                 ln = peek
 
-    def bottoms(self, x):
-        b = self.b
-        for s in self.__strata:
-            if s.isdebris():
-                y = s.bottom.interp(x)
-            else:
-                b -= s.h
-                y = x * self.m + self.b
-            yield y
-
-    def gamma(self, x):
-        h = self.omega.interp(x[0])
-        parts = []
-        rho = []
-        for i, y in enumerate(self.bottoms()):
-            if x[1] > y:
-                break
-            h -= y
-            parts.append(h)
-            rho.append(slef.__strata[i].rho_b)
-        if i < len(self.__strata):
-            parts.append(y - x[1])
-            rho.append(slef.__strata[i].rho_b)
-        parts = np.asarray(parts)
-        rho = np.asarray(rho)
-        return ((parts / parts.sum()) * rho).sum()
-
-    def iscrack(self, x, eps):
-        for crack in np.asarray(self.cracks):
-            if np.abs(x - crack) < eps:
-                return True
-        return False
-
-    def stratum(self, x):
-        if type(x) == str:
-            for s in self.__strata:
-                if s.name == x:
-                    return s
-        elif type(x) == int:
-            return self.__strata[x]
-        for i, y in enumerate(self.bottoms(x[0])):
-            if x[1] > y:
-                return self.__strata[i]
-        return None
-
-    def top(self, x, relief=True):
-        if not relief:
-            for s in self.__strata[::-1]:
-                if s.isdebris():
-                    return s.bottom.interp(x)
-        return self.omega.interp(x)
+    def top(self, x):
+        return np.interp(x, self.ridge.x, self.ridge.y)
