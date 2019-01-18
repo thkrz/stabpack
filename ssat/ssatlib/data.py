@@ -35,9 +35,9 @@ KEYWORDS = [{
 WORDS = list(chain.from_iterable([w.keys() for w in KEYWORDS]))
 
 
-class Stratum(shape.Edge):
+class Stratum:
     def __init__(self):
-        super().__init__(0, 0)
+        self.bottom = None
 
     def fissure_depth(self):
         return 2. * self.c / self.gamma() * np.tan(
@@ -54,29 +54,35 @@ class Slope:
         self.__strata = []
         self.__parse(name)
 
-        self.ridge = shape.Boundary(self.ridge[:, 0], self.ridge[:, 1])
-        if not hasattr(self.span):
+        self.ridge = shape.LineString(self.ridge[:, 0], self.ridge[:, 1])
+        if not hasattr(self, 'span'):
             self.span = self.ridge.span
-        if hasattr(self.cracks):
+        if hasattr(self, 'cracks'):
             self.cracks = np.atleast_1d(self.cracks)
 
         top = self.ridge
         i = 0
         s = self.__strata[i]
         while s.isdebris():
-            v = top.vdist(mu)
-            vmax = np.amax(v)
-            y = (s.h[1] - s.h[0]) * (v / vmax) + s.h[0]
-            s.bottom = shape.Boundary(top.x, top.y - y)
+            k = top.kinetic_energy(
+                mu, forward=True) + top.kinetic_energy(
+                    mu, forward=False)
+            kmax = np.amax(k)
+            y = (s.h[1] - s.h[0]) * (k / kmax) + s.h[0]
+            s.bottom = shape.LineString(top.x, top.y - y)
             top = s.bottom
             i += 1
+            if i == len(self.__strata):
+                break
             s = self.__strata[i]
-        b = self.top(self.o)
-        m = np.arctan(np.radians(self.alpha))
+        a = np.asarray((self.o, self.top(self.o)))
+        b = a + np.asarray((np.cos(self.alpha), np.sin(self.alpha)))
+        h = 0
         for s in self.__strata[i:]:
-            s.m = m
-            s.b = b - s.h
-            b = s.b
+            h += s.h / np.cos(self.alpha)
+            a[1] -= h
+            b[1] -= h
+            s.bottom = shape.Line(a, b)
 
     def __iter__(self):
         self.__curr = 0
@@ -136,4 +142,4 @@ class Slope:
                 ln = peek
 
     def top(self, x):
-        return np.interp(x, self.ridge.x, self.ridge.y)
+        return self.ridge.interp(x)
