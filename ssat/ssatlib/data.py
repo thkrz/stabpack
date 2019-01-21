@@ -54,46 +54,22 @@ class Slope:
         self.__strata = []
         self.__parse(name)
 
-        self.ridge = shape.LineString(self.ridge[:, 0], self.ridge[:, 1])
-        if not hasattr(self, 'span'):
-            self.span = self.ridge.span
-        if hasattr(self, 'cracks'):
+        self.ridge = shape.LineString.fromarray(self.ridge)
+        if self.cracks is not None:
             self.cracks = np.atleast_1d(self.cracks)
 
-        top = self.ridge
-        i = 0
-        s = self.__strata[i]
-        while s.isdebris():
-            k = top.kinetic_energy(
-                mu, forward=True) + top.kinetic_energy(
-                    mu, forward=False)
-            kmax = np.amax(k)
-            y = (s.h[1] - s.h[0]) * (k / kmax) + s.h[0]
-            s.bottom = shape.LineString(top.x, top.y - y)
-            top = s.bottom
-            i += 1
-            if i == len(self.__strata):
-                break
-            s = self.__strata[i]
-        a = np.asarray((self.o, self.top(self.o)))
-        b = a + np.asarray((np.cos(self.alpha), np.sin(self.alpha)))
-        h = 0
-        for s in self.__strata[i:]:
-            h += s.h / np.cos(self.alpha)
-            a[1] -= h
-            b[1] -= h
-            s.bottom = shape.Line(a, b)
+        alpha = np.radians(self.alpha)
+        a = shape.Point(self.o, self.ridge.interp(self.o))
+        for s in self.__strata:
+            a[1] -= s.h / np.cos(alpha)
+            s.bottom = shape.Line.fromrotation(a, alpha)
 
     def __iter__(self):
-        self.__curr = 0
+        self.__iter = iter(self.__strata)
         return self
 
     def __next__(self):
-        i = self.__curr
-        if i == len(self.__strata):
-            raise StopIteration
-        self.__curr += 1
-        return self.__strata[i]
+        return next(self.__iter)
 
     def __parse(self, name):
         c = False
@@ -113,12 +89,14 @@ class Slope:
                 if ln == "BEGINSLOPE":
                     o = self
                     w = KEYWORDS[1]
+                    map(lambda n: setattr(o, n, None), w.values())
                 elif ln == "ENDSLOPE":
                     break
                 elif ln == "BEGINLAYER":
                     o = Stratum()
-                    self.__strata.append(o)
                     w = KEYWORDS[2]
+                    map(lambda n: setattr(o, n, None), w.values())
+                    self.__strata.append(o)
                 elif ln == "ENDLAYER":
                     o = self
                     w = KEYWORDS[1]
@@ -141,5 +119,38 @@ class Slope:
                             v = []
                 ln = peek
 
-    def top(self, x):
-        return self.ridge.interp(x)
+    # def kinetic_energy(self, mu, forward=True, m=1.):
+    #     threshold = .5 * np.pi
+    #     v = np.zeros(self.n)
+    #     for i in range(self.n - 1):
+    #         j = i + 1
+    #         x0 = self[i if forward else self.n - 1 - i]
+    #         x1 = self[j if forward else self.n - 1 - j]
+    #         dy = x0[1] - x1[1]
+    #         if not forward:
+    #             dy = -dy
+    #         alpha = np.arctan(dy / np.abs(x1[0] - x0[0]))
+    #         a = G * (np.sin(alpha) - np.cos(alpha) * mu)
+    #         if alpha > threshold or a / G > .6:
+    #             v[j] = np.sqrt(2. * G * np.abs(dy)) + v[i] * np.sin(alpha)
+    #             continue
+    #         if a == 0:
+    #             v[j] = v[i]
+    #             continue
+    #         s = np.linalg.norm(x1 - x0)
+    #         p = v[i] / a
+    #         q = -2. * s / a
+    #         det = p**2 - q
+    #         if det >= 0:
+    #             t1 = -p + np.sqrt(det)
+    #             t2 = -p - np.sqrt(det)
+    #             if t1 < 0 and t2 > 0:
+    #                 t = t2
+    #             elif t2 < 0 and t1 > 0:
+    #                 t = t1
+    #             elif t1 > 0 and t2 > 0:
+    #                 t = np.minimum(t1, t2)
+    #             else:
+    #                 t = 0.0
+    #             v[j] = t * a + v[i]
+    #     return .5 * m * np.pow(v, 2)
