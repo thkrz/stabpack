@@ -11,4 +11,4 @@ contains
     write(error_unit, *) trim(s)
     error stop
   end subroutine
-end program
+end module

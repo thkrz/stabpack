@@ -1,4 +1,5 @@
 module fmin
+  implicit none
   private
   public :: amoeba
 

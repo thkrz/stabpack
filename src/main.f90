@@ -9,7 +9,7 @@ program main
 
   namelist /CONFIG/ input
 
-  if(command_argument_count() /= 1) call fatal("control file missing.")
+  if(command_argument_count() /= 1) call fatal('control file missing.')
   call get_command_argument(1, arg)
   open(newunit=id, file=trim(arg), status='old', iostat=stat, iomsg=msg, action='read')
   if(stat /= 0) call fatal(msg)

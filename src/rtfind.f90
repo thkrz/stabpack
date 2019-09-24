@@ -1,4 +1,5 @@
 module rtfind
+  implicit none
   private
   public :: zbrent, rtnewt
 

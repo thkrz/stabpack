@@ -1,11 +1,10 @@
 module bezier
+  use ssat_env, only: ndim, pi
   implicit none
   private
   public bezier_arc
   public bezier_curve
-
-  integer, parameter :: ndim = 2
-  real, parameter :: pi = 4. * atan(1.)
+  public bezier_line
 
 contains
   pure subroutine bezier_arc(p)
@@ -23,8 +22,8 @@ contains
     rot(1, 2) = -sin(theta)
     rot(2, 1) = sin(theta)
     rot(2, 2) = cos(theta)
-    a = p(1)
-    b = dot_product(rot, dx) + a
+    a = p(1, 1)
+    b = matmul(rot, dx) + a
 
     phi = .25 * pi
     r = abs(a(2) - b(2)) / (2. * sin(phi))
@@ -36,23 +35,23 @@ contains
       p(i, :) = p(1, :)
     end do
     do i = m, m + 1
-      p(i, :) = dot_product(inv(rot), p(i, :) - a) + a
+      p(i, :) = matmul(inv(rot), p(i, :) - a) + a
     end do
     do i = m + 2, n - 1
       p(i, :) = p(n, :)
     end do
   end subroutine
 
-  elemental function bez(t, p)
+  pure function bezier_curve(t, p) result(c)
     real, intent(in) :: t, p(:, :)
-    real :: bez(size(p, 1))
+    real :: c(size(p, 1))
     integer :: i, n
 
-    bez = 0
+    c = 0
     if(t < 0 .or. t > 1) return
     n = size(p, 2) - 1
     do i = 0, n
-      bez = bez + b(t, i, n) * p(:, i+1)
+      c = c + b(t, i, n) * p(:, i+1)
     end do
 
   contains
@@ -78,6 +77,16 @@ contains
       factln = product([(i, i=1,n)])
     end function
   end function
+
+  pure subroutine bezier_line(p)
+    real, intent(inout) :: p(:, :)
+    integer :: i, n
+
+    n = size(p, 1)
+    do i = 2, n - 1
+      p(i, :) = (p(n, :) - p(1, :)) * real(i) / n + p(1, :)
+    end do
+  end subroutine
 
   pure function inv(a) result(b)
     real, intent(in) :: a(2, 2)
