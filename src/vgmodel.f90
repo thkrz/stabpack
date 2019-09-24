@@ -1,5 +1,8 @@
-module vg_mod
+module vgmodel
   implicit none
+  private
+  public vg_rhc
+  public vg_wc
 
 contains
   elemental function vg_rhc(t, n)

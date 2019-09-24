@@ -1,4 +1,5 @@
 module slope
+  use interp1d
   use ssat_env
   implicit none
   private
@@ -48,7 +49,7 @@ contains
     do i = 1, n
       if(a(2) < y1 .and. a(2) >= y0(i)) then
         gamma = prop(i, 2)
-        phi = prop(i, 3) * pi / 180.
+        phi = radians(prop(i, 3))
         c = prop(i, 4)
         return
       end if
@@ -58,20 +59,7 @@ contains
   elemental function slope_surface(x) result(y)
     real, intent(in) :: x
     real :: y
-    integer :: i, j, n
 
-    if(x < elev(1, 1)) then
-      y = elev(1, 2)
-      return
-    end if
-    n = size(elev, 1)
-    do i = 1, n - 1
-      j = i + 1
-      if(x >= elev(i, 1) .and. x < elev(j, 1)) then
-        y = elev(i, 2) + (x - elev(i, 1)) * (elev(j, 2) - elev(i, 2)) / (elev(j, 1) - elev(i, 1))
-        return
-      end if
-    end do
-    y = elev(n, 2)
+    y = interp(x, elev(:, 1), elev(:, 2))
   end function
 end module
