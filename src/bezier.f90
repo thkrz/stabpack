@@ -30,15 +30,12 @@ contains
     cosb = cos(.25 * pi)
     sinb = cosb
     r = abs(a(2) - b(2)) / (2. * sinb)
-    dx =  k * r * (/ sinb, cosb /)
-    p(m, :) = a + dx
-    p(m + 1, :) = b + dx
     do i = 2, m - 1
       p(i, :) = p(1, :)
     end do
-    do i = m, m + 1
-      p(i, :) = matmul(inv(rot), p(i, :) - a) + a
-    end do
+    dx =  k * r * (/ sinb, cosb /)
+    p(m, :) = matmul(inv(rot), dx) + a
+    p(m + 1, :) = matmul(inv(rot), b + dx - a) + a
     do i = m + 2, n - 1
       p(i, :) = p(n, :)
     end do
