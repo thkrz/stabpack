@@ -1,5 +1,6 @@
 program main
   use, intrinsic :: iso_fortran_env, only: error_unit
+  use ssat_env, only: fatal
   use slope
   implicit none
 
@@ -19,12 +20,4 @@ program main
   call slope_init(input)
   call slope_finalize
   stop
-
-contains
-  subroutine fatal(s)
-    character(*), intent(in) :: s
-
-    write(error_unit, *) trim(s)
-    error stop
-  end subroutine
 end program

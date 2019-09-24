@@ -1,6 +1,6 @@
 include config.mk
 
-OBJ = src/slope.o src/main.o
+OBJ = src/ssat_env.o src/slope.o src/main.o
 
 %.o: %.f90
 	@echo FC $<
@@ -13,7 +13,8 @@ ssat: ${OBJ}
 	@${FC} -o $@ ${OBJ} ${LDFLAGS}
 
 clean:
-	find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
-	rm -f ssat
+	@echo cleaning...
+	@find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
+	@rm -f ssat
 
 .PHONY: all clean

@@ -1,4 +1,5 @@
 module slope
+  use ssat_env
   implicit none
   private
   public slope_finalize
@@ -6,8 +7,7 @@ module slope
   public slope_parameters
   public slope_surface
 
-  real, parameter :: pi = 4. * atan(1.)
-  integer, parameter :: ndim = 2, nparam = 9
+  integer, parameter :: nparam = 9
   real, dimension(:, :), allocatable :: elev, prop
   logical :: is_initialized = .false.
 
