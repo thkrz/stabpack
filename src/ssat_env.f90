@@ -8,6 +8,7 @@ module ssat_env
 contains
   elemental function degrees(rad) result(deg)
     real, intent(in) :: rad
+    real :: deg
 
     deg = rad * 180. / pi
   end function
@@ -20,7 +21,8 @@ contains
   end subroutine
 
   elemental function radians(deg) result(rad)
-    real, intent(in) :: rad
+    real, intent(in) :: deg
+    real :: rad
 
     rad = deg * pi / 180.
   end function

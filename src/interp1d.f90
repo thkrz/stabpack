@@ -7,12 +7,11 @@ contains
   pure function interp(x, xp, fp) result(y)
     real, intent(in) :: x, xp(:), fp(:)
     integer :: i, j, n
+    real :: y
 
     n = size(xp)
-    if(x < xp(1)) then
-      y = fp(1)
-      return
-    end if
+    y = fp(1)
+    if(x < xp(1)) return
     do i = 1, n - 1
       j = i + 1
       if(x >= xp(i) .and. x < xp(j)) then

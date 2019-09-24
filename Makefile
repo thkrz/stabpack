@@ -1,7 +1,8 @@
 include config.mk
 
 OBJ = src/ssat_env.o src/bezier.o src/fmin.o \
-			src/rtfind.o src/slope.o src/main.o
+			src/interp1d.o src/rtfind.o src/slope.o \
+			src/main.o
 
 %.o: %.f90
 	@echo FC $<

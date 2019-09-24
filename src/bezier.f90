@@ -11,26 +11,28 @@ contains
     real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.)
     real, intent(inout) :: p(:, :)
     integer :: i, m, n
-    real, dimension(2) :: a, b, dx
-    real :: r, phi, theta, rot(2, 2)
+    real, dimension(ndim) :: a, b, dx
+    real :: beta, cosb, sinb, r, rot(ndim, ndim)
 
     n = size(p, 1)
     m = n / 2
     dx = p(n, :) - p(1, :)
-    theta = .5 * pi - atan(dx(2) / dx(1))
-    rot(1, 1) = cos(theta)
-    rot(1, 2) = -sin(theta)
-    rot(2, 1) = sin(theta)
-    rot(2, 2) = cos(theta)
+    beta = .5 * pi - atan(dx(2) / dx(1))
+    cosb = cos(beta)
+    sinb = sin(beta)
+    rot(1, 1) = cosb
+    rot(1, 2) = -sinb
+    rot(2, 1) = sinb
+    rot(2, 2) = cosb
     a = p(1, 1)
     b = matmul(rot, dx) + a
 
-    phi = .25 * pi
-    r = abs(a(2) - b(2)) / (2. * sin(phi))
-    p(m, 1) = a(1) + k * r * sin(phi)
-    p(m, 2) = a(2) + k * r * cos(phi)
-    p(m + 1, 1) = b(1) + k * r * sin(phi)
-    p(m + 1, 2) = b(2) + k * r * cos(phi)
+    cosb = cos(.25 * pi)
+    sinb = cosb
+    r = abs(a(2) - b(2)) / (2. * sinb)
+    dx =  k * r * (/ sinb, cosb /)
+    p(m, :) = a + dx
+    p(m + 1, :) = b + dx
     do i = 2, m - 1
       p(i, :) = p(1, :)
     end do
