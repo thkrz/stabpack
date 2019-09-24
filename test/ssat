@@ -1,4 +1,0 @@
-#!/bin/bash -e
-export PYTHONPATH="$PWD:$PYTHONPATH"
-cd examples && ../bin/ssat ssat.cfg "$@"
-# cd examples && python3 -m cProfile ../bin/ssat ssat.cfg "$@"

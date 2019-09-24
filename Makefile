@@ -1,14 +1,19 @@
-STABPACK = ssat/ssatlib/stabpack
+include config.mk
 
-all: stabpack
+OBJ = src/slope.o src/main.o
 
-stabpack:
-	@echo BUILD STABPACK
-	@$(MAKE) --no-print-directory -C ${STABPACK}
+%.o: %.f90
+	@echo FC $<
+	@${FC} -o $@ -c ${FFLAGS} $<
+
+all: ssat
+
+ssat: ${OBJ}
+	@echo LD $@
+	@${FC} -o $@ ${OBJ} ${LDFLAGS}
 
 clean:
-	@echo cleaning...
-	@find ./ssat -name '__pycache__' -prune -exec rm -rf {} +
-	@$(MAKE) --no-print-directory -C ${STABPACK} clean
+	find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
+	rm -f ssat
 
-.PHONY: clean
+.PHONY: all clean
