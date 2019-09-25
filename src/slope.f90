@@ -3,25 +3,26 @@ module slope
   use ssat_env
   implicit none
   private
-  public slope_finalize
-  public slope_init
-  public slope_parameters
-  public slope_surface
+  public slopefin
+  public slopeinit
+  public slopeparam
+  public slopesurf
 
   integer, parameter :: nparam = 10
-  real, dimension(:, :), allocatable :: elev, prop
+  real, allocatable :: elev(:, :), prop(:, :), x0(:)
   logical :: is_initialized = .false.
 
 contains
-  subroutine slope_finalize
+  subroutine slopefin
+    deallocate(x0)
     deallocate(prop)
     deallocate(elev)
     is_initialized = .false.
   end subroutine
 
-  subroutine slope_init(name)
+  subroutine slopeinit(name)
     character(*), intent(in) :: name
-    integer :: id, n
+    integer :: id, i, n
 
     open(newunit=id, file=name, action='read', status='old')
     read(id, *) n
@@ -32,12 +33,17 @@ contains
     allocate(prop(n, nparam))
     read(id, *) prop
     close(id)
+
+    allocate(x0(n))
+    do concurrent(i = 1, n)
+      x0(i) = interp(prop(i, 1), elev(:, 2), elev(:, 1))
+    end do
     is_initialized = .true.
   end subroutine
 
-  pure subroutine slope_parameters(x, y, alpha, w, phi, c) ! theta, res, sat, a, n, k
+  pure subroutine slopeparam(x, y, alpha, params) ! theta, res, sat, a, n, k
     real, intent(in) :: x, y, alpha
-    real, intent(out) :: w, phi, c
+    real, intent(out) :: params(nparam)
     integer :: i, n
     real :: tana, x0, y0, y1
 
@@ -45,20 +51,17 @@ contains
 
     tana = tan(alpha)
     n = size(prop, 1)
-    y1 = slope_surface(x)
+    y1 = slopesurf(x)
     do i = 1, n
-      x0 = interp(prop(i, 1), elev(:, 2), elev(:, 1))
-      y0 = slope_surface(x0) + tana * (x - x0)
+      y0 = slopesurf(x0(i)) + tana * (x - x0(i))
       if(y < y1 .and. y >= y0) then
-        w = prop(i, 2)
-        phi = radians(prop(i, 3))
-        c = prop(i, 4)
+        params = prop(i, 2:)
         return
       end if
     end do
   end subroutine
 
-  elemental function slope_surface(x) result(y)
+  elemental function slopesurf(x) result(y)
     real, intent(in) :: x
     real :: y
 

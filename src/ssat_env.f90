@@ -2,7 +2,7 @@ module ssat_env
   use, intrinsic :: iso_fortran_env, only: error_unit
   public
 
-  real, parameter :: pi = 4. * atan(1.)
+  real, parameter :: g = 9.81, pi = 4. * atan(1.)
   integer, parameter :: ndim = 2
 
 contains
