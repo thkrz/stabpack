@@ -8,7 +8,7 @@ module slope
   public slope_parameters
   public slope_surface
 
-  integer, parameter :: nparam = 9
+  integer, parameter :: nparam = 10
   real, dimension(:, :), allocatable :: elev, prop
   logical :: is_initialized = .false.
 
