@@ -1,6 +1,7 @@
 include config.mk
 
 OBJ = src/ssat_env.o src/stabpack.o \
+			src/leqpack.o src/hydropack.o \
 			src/slope.o	src/main.o
 
 %.o: %.f90
