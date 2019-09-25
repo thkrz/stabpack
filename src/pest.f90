@@ -1,3 +1,3 @@
-module limit_eq
+module pest
   implicit none
 end module
