@@ -1,7 +1,7 @@
 include config.mk
 
 OBJ = src/ssat_env.o src/stabpack.o \
-			src/slope.o	src/vg.o src/main.o
+			src/slope.o	src/main.o
 
 %.o: %.f90
 	@echo FC $<

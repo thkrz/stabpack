@@ -35,19 +35,20 @@ contains
     is_initialized = .true.
   end subroutine
 
-  pure subroutine slope_parameters(a, alpha, gamma, phi, c) ! a, n, res, sat, theta
-    real, intent(in) :: a(ndim), alpha
+  pure subroutine slope_parameters(x, y, alpha, gamma, phi, c) ! theta, res, sat, a, n, k
+    real, intent(in) :: x, y, alpha
     real, intent(out) :: gamma, phi, c
     integer :: i, n
-    real :: y0(size(prop, 1)), y1
+    real :: x0, y0, y1
+
+    if(.not. is_initialized) error stop
 
     n = size(prop, 1)
-    y1 = slope_surface(a(1))
-    if(alpha == 0) then
-      y0 = prop(:, 1)
-    end if
+    y1 = slope_surface(x)
     do i = 1, n
-      if(a(2) < y1 .and. a(2) >= y0(i)) then
+      x0 = interp(prop(i, 1), elev(:, 2), elev(:, 1))
+      y0 = slope_surface(x0) + tan(alpha) * (x - x0)
+      if(y < y1 .and. y >= y0) then
         gamma = prop(i, 2)
         phi = radians(prop(i, 3))
         c = prop(i, 4)
@@ -59,6 +60,8 @@ contains
   elemental function slope_surface(x) result(y)
     real, intent(in) :: x
     real :: y
+
+    if(.not. is_initialized) error stop
 
     y = interp(x, elev(:, 1), elev(:, 2))
   end function

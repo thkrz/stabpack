@@ -1,5 +1,4 @@
 module bez
-  use ssat_env, only: ndim, pi
   implicit none
   private
   public beza
@@ -8,11 +7,12 @@ module bez
 
 contains
   pure subroutine beza(p)
-    real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.)
+    real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.), &
+                       pi = 4. * atan(1.)
     real, intent(inout) :: p(:, :)
     integer :: i, m, n
-    real, dimension(ndim) :: a, b, dx
-    real :: beta, cosb, sinb, r, rot(ndim, ndim)
+    real, dimension(2) :: a, b, dx
+    real :: beta, cosb, sinb, r, rot(2, 2)
 
     n = size(p, 1)
     m = n / 2
@@ -34,8 +34,9 @@ contains
       p(i, :) = p(1, :)
     end do
     dx =  k * r * (/ sinb, cosb /)
-    p(m, :) = matmul(inv(rot), dx) + a
-    p(m + 1, :) = matmul(inv(rot), b + dx - a) + a
+    rot = inv(rot)
+    p(m, :) = matmul(rot, dx) + a
+    p(m + 1, :) = matmul(rot, b + dx - a) + a
     do i = m + 2, n - 1
       p(i, :) = p(n, :)
     end do
@@ -82,7 +83,7 @@ contains
     integer :: i, n
 
     n = size(p, 1)
-    do i = 2, n - 1
+    do i = 1, n - 1
       p(i, :) = (p(n, :) - p(1, :)) * real(i) / n + p(1, :)
     end do
   end subroutine
@@ -349,4 +350,38 @@ contains
     end do
     if(present(stat)) stat = -2
   end subroutine
+end module
+
+module vg
+  implicit none
+  private
+  public vgms
+  public vgrhc
+  public vgsm
+
+contains
+  elemental function vgms(t, a, n)
+    real, intent(in) :: t, a, n
+    real :: m, mt, vgms
+
+    m = 1. - 1. / n
+    mt = t**(1. / m)
+    vgms = 1. / a * ((1 - mt) / mt)**(1. / n)
+  end function
+
+  elemental function vgrhc(t, n)
+    real, intent(in) :: t, n
+    real :: m, vgrhc
+
+    m = 1. - 1. / n
+    vgrhc = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
+  end function
+
+  elemental function vgsm(h, a, n)
+    real, intent(in) :: h, a, n
+    real :: m, vgsm
+
+    m = 1. - 1. / n
+    vgsm = (1. + (a * h)**n)**(-m)
+  end function
 end module
