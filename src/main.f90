@@ -6,8 +6,9 @@ program main
 
   character(len=255) :: arg, input, msg
   integer :: id, stat
+  real :: alpha
 
-  namelist /CONFIG/ input
+  namelist /CONFIG/ alpha, input
 
   if(command_argument_count() /= 1) call fatal('control file missing.')
   call get_command_argument(1, arg)
@@ -17,7 +18,7 @@ program main
   if(stat /= 0) call fatal(msg)
   close(id)
 
-  call slope_init(input)
-  call slope_finalize
+  call slopeinit(input, alpha)
+  call slopefin
   stop
 end program

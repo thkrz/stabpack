@@ -3,7 +3,6 @@ module ssat_env
   public
 
   real, parameter :: g = 9.81, pi = 4. * atan(1.)
-  integer, parameter :: ndim = 2
 
 contains
   elemental function degrees(rad) result(deg)
