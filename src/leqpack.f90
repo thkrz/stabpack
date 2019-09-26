@@ -4,9 +4,9 @@ module razdol
   public razslv
 
 contains
-  pure subroutine razslv(n, c, phi, w, u, alpha, b, h, f, e, t, mu, p0)
+  pure subroutine razslv(n, w, c, phi, u, alpha, b, h, f, e, t, mu, p0)
     integer, intent(in) :: n
-    real, dimension(n), intent(in) :: c, phi, w, u, alpha, b
+    real, dimension(n), intent(in) :: w, c, phi, u, alpha, b
     real, intent(in) :: h(n + 1), f
     real, dimension(n + 1), intent(out) :: e, t
     real, intent(out) :: mu
