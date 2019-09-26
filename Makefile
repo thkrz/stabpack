@@ -1,8 +1,7 @@
 include config.mk
 
-OBJ = src/ssat_env.o src/hydropack.o \
-			src/leqpack.o src/stabpack.o \
-			src/slope.o	src/critss.o src/main.o
+OBJ = src/hydropack.o src/leqpack.o src/stabpack.o \
+      src/main.o
 
 %.o: %.f90
 	@echo FC $<
