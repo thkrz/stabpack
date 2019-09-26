@@ -10,14 +10,14 @@ module slope
 
   real, allocatable :: h(:, :), p(:, :), x0(:)
   real :: tana
-  logical :: is_initialized = .false.
+  logical :: is_init = .false.
 
 contains
   subroutine slopefin
     deallocate(x0)
     deallocate(p)
     deallocate(h)
-    is_initialized = .false.
+    is_init = .false.
   end subroutine
 
   subroutine slopeinit(name, alpha)
@@ -47,7 +47,7 @@ contains
     do concurrent(i=1:n)
       x0(i) = interp(p(i, 1), h(:, 2), h(:, 1))
     end do
-    is_initialized = .true.
+    is_init = .true.
   end subroutine
 
   pure subroutine slopeparam(x, y, w, phi, c) ! theta, a, n, k
@@ -56,7 +56,7 @@ contains
     integer :: i, n
     real :: y0, y1
 
-    if(.not. is_initialized) error stop
+    if(.not. is_init) error stop
 
     n = size(p, 1)
     y1 = sloperidge(x)
@@ -79,7 +79,7 @@ contains
     real, intent(in) :: x
     real :: y
 
-    if(.not. is_initialized) error stop
+    if(.not. is_init) error stop
 
     y = interp(x, h(:, 1), h(:, 2))
   end function
