@@ -32,24 +32,23 @@ module slope
   use ssat_env, only: fatal, radians
   implicit none
   private
-  public slopefin
-  public slopeinit
-  public slopeparam
-  public sloperidge
+  public slope_fin
+  public slope_init
+  public slope_prop
+  public slope_top
 
-  real, allocatable :: h(:, :), p(:, :), x0(:)
+  real, allocatable :: h(:, :), p(:, :)
   real :: tana
   logical :: is_init = .false.
 
 contains
-  subroutine slopefin
-    deallocate(x0)
+  subroutine slope_fin
     deallocate(p)
     deallocate(h)
     is_init = .false.
   end subroutine
 
-  subroutine slopeinit(name, alpha)
+  subroutine slope_init(name, alpha)
     character(*), intent(in) :: name
     real, intent(in) :: alpha
     integer :: id, i, n, stat
@@ -71,26 +70,22 @@ contains
     read(id, *, iostat=stat, iomsg=msg) (p(i, :), i=1,n)
     if(stat /= 0) call fatal(msg)
     close(id)
-
-    allocate(x0(n))
-    do concurrent(i=1:n)
-      x0(i) = interp(p(i, 1), h(:, 2), h(:, 1))
-    end do
     is_init = .true.
   end subroutine
 
-  pure subroutine slopeparam(x, y, w, phi, c) ! theta, a, n, k
+  pure subroutine slope_prop(x, y, w, phi, c) ! theta, a, n, k
     real, intent(in) :: x, y
     real, intent(out) :: w, phi, c
     integer :: i, n
-    real :: y0, y1
+    real :: x0, y0, y1
 
     if(.not. is_init) error stop
 
     n = size(p, 1)
-    y1 = sloperidge(x)
+    y1 = slope_top(x)
     do i = 1, n
-      y0 = sloperidge(x0(i)) + tana * (x - x0(i))
+      x0 = interp(p(i, 1), h(:, 2), h(:, 1))
+      y0 = slope_top(x0) + tana * (x - x0)
       if(y >= y0 .and. y < y1) then
         w = p(i, 2)
         phi = radians(p(i, 3))
@@ -104,7 +99,7 @@ contains
     end do
   end subroutine
 
-  elemental function sloperidge(x) result(y)
+  elemental function slope_top(x) result(y)
     real, intent(in) :: x
     real :: y
 
@@ -121,14 +116,12 @@ module critss
   use slope
   implicit none
   private
-  public critfind
+  public critss_find
 
 contains
-  subroutine critfind(num, n, a, b)
+  subroutine critss_find(num, n, a, b)
     integer, intent(in) :: num, n
     real, intent(in) :: a, b
-
-    print *, sloperidge(73.5)
   end subroutine
 end module
 
