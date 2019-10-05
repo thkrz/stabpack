@@ -32,50 +32,68 @@ module slope
   use ssat_env, only: fatal, radians
   implicit none
   private
-  public slope_fin
-  public slope_init
-  public slope_prop
+  public slope_close
+  public slope_load
+  public slope_stratum
   public slope_top
+  public stratum
 
-  real, allocatable :: h(:, :), p(:, :)
+  type stratum
+    real h
+    real w
+    real phi
+    real c
+    real theta
+    real res
+    real sat
+    real a
+    real n
+    real k
+  end type
+
+  real, allocatable :: xh(:), yh(:)
+  type(stratum), allocatable :: strata(:)
   real :: tana
   logical :: is_init = .false.
 
 contains
-  subroutine slope_fin
-    deallocate(p)
-    deallocate(h)
+  subroutine slope_close
+    deallocate(strata)
+    deallocate(xh)
+    deallocate(yh)
     is_init = .false.
   end subroutine
 
-  subroutine slope_init(name, alpha)
+  subroutine slope_load(name)
     character(*), intent(in) :: name
     real, intent(in) :: alpha
     integer :: id, i, n, stat
     character(255) :: msg
 
-    tana = tan(radians(alpha))
-
     open(newunit=id, file=name, action='read', status='old', iostat=stat, iomsg=msg)
     if(stat /= 0) call fatal(msg)
+    read(id, *, iostat=stat, iomsg=msg) alpha
+    if(stat /= 0) call fatal(msg)
+    tana = tan(radians(alpha))
     read(id, *, iostat=stat, iomsg=msg) n
     if(stat /= 0) call fatal(msg)
-    allocate(h(n, 2))
-    read(id, *, iostat=stat, iomsg=msg) (h(i, :), i=1,n)
+    allocate(xh(n))
+    allocate(yh(n))
+    read(id, *, iostat=stat, iomsg=msg) ((x(i), y(i)), i=1,n)
     if(stat /= 0) call fatal(msg)
 
     read(id, *, iostat=stat, iomsg=msg) n
     if(stat /= 0) call fatal(msg)
-    allocate(p(n, 10))
-    read(id, *, iostat=stat, iomsg=msg) (p(i, :), i=1,n)
+    allocate(strata(n))
+    read(id, *, iostat=stat, iomsg=msg) (strata(i), i=1,n)
     if(stat /= 0) call fatal(msg)
     close(id)
     is_init = .true.
   end subroutine
 
-  pure subroutine slope_prop(x, y, w, phi, c) ! theta, a, n, k
+  pure function slope_stratum(x, y) result(s)
     real, intent(in) :: x, y
-    real, intent(out) :: w, phi, c
+    type(stratum), pointer :: s
     integer :: i, n
     real :: x0, y0, y1
 
@@ -84,18 +102,14 @@ contains
     n = size(p, 1)
     y1 = slope_top(x)
     do i = 1, n
-      x0 = interp(p(i, 1), h(:, 2), h(:, 1))
-      y0 = slope_top(x0) + tana * (x - x0)
-      if(y >= y0 .and. y < y1) then
-        w = p(i, 2)
-        phi = radians(p(i, 3))
-        c = p(i, 4)
-        ! theta = (p(i, 5)- p(i, 6)) / (p(i, 7) - p(i, 6))
-        ! a = p(i, 8)
-        ! n = p(i, 9)
-        ! k = p(i, 10)
-        return
-      end if
+      associate(h => strata(i)%h)
+        x0 = interp(h, yh, xh)
+        y0 = slope_top(x0) + tana * (x - x0)
+        if(y >= y0 .and. y < y1) then
+          s => strata(i)
+          return
+        end if
+      end associate
     end do
   end subroutine
 
@@ -105,7 +119,7 @@ contains
 
     if(.not. is_init) error stop
 
-    y = interp(x, h(:, 1), h(:, 2))
+    y = interp(x, xh, yh)
   end function
 end module
 
@@ -122,6 +136,11 @@ contains
   subroutine critss_find(num, n, a, b)
     integer, intent(in) :: num, n
     real, intent(in) :: a, b
+    real :: omega(num)
+
+    w = x(n) - x(1)
+    dx = w / num
+    omega = slope_top(
   end subroutine
 end module
 
@@ -151,9 +170,9 @@ program main
   if(stat /= 0) call fatal(msg)
   close(id)
 
-  call slopeinit(input, alpha)
+  call slope_init(input, alpha)
   if(mode == 'crit') call critfind(0, 0, 0., 0.)
   if(mode == 'pest') error stop
-  call slopefin
+  call slope_fin
   stop
 end program
