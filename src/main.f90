@@ -151,6 +151,7 @@ end module
 program main
   use, intrinsic :: iso_fortran_env, only: error_unit
   use ssat_env, only: fatal
+  use bez
   use critss
   use slope
   implicit none
@@ -175,4 +176,41 @@ program main
   if(mode == 'pest') error stop
   call slope_fin
   stop
+contains
+  pure subroutine mos(p, slices, stat)
+    real, intent(in) :: p(:, :)
+    type(slice), intent(out) :: slices(:)
+    integer, intent(in) :: stat
+    real :: c(size(p, 2)), t(0:size(slices)), y(size(slices)+1)
+    integer :: i, j, k, n
+    type(stratum) :: s
+
+    k = size(p, 1)
+    n = size(slices)
+    stat = 0
+    do concurrent(i = 0:n)
+      t(i) = real(i) / n
+    end do
+
+    d = rd * norm2(p(1, :) - p(k, :))
+    xy = bezc(t, p)
+    if (any(xy(2:, 1) - xy(:n, 1) < 0)) then
+      stat = -1
+      return
+    end if
+    y = slope_top(xy(:, 1))
+    do i = 1, n
+      j = i + 1
+      h(1) = y(i) - xy(i, 2)
+      h(2) = y(j) - xy(j, 2)
+      if (any(h < 0) .or. any(h) > d) then
+        stat = -1
+        return
+      end if
+      b = xy(j, 1) - xy(i, 1)
+      c = .5 * (xy(j, :) + xy(i, :))
+      s = slope_stratum(c(1), c(2))
+      ! usw
+    end do
+  end subroutine
 end program

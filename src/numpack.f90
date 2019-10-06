@@ -6,17 +6,19 @@ module bez
   public bezl
 
 contains
-  pure subroutine beza(p)
+  pure function beza(n, a, b) result(p)
     real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.), &
                        pi = 4. * atan(1.)
-    real, intent(inout) :: p(:, :)
-    integer :: i, m, n
-    real, dimension(2) :: a, b, dx
+    integer, intent(in) :: n
+    real, intent(in) :: a(:), b(:)
+    integer :: i, m
+    real :: br(2), dx(2), p(n, 2)
     real :: beta, cosb, sinb, r, rot(2, 2)
 
-    n = size(p, 1)
+    if (n % 2 /= 0) error stop
+
     m = n / 2
-    dx = p(n, :) - p(1, :)
+    dx = b - a
     beta = .5 * pi - atan(dx(2) / dx(1))
     cosb = cos(beta)
     sinb = sin(beta)
@@ -24,23 +26,22 @@ contains
     rot(1, 2) = -sinb
     rot(2, 1) = sinb
     rot(2, 2) = cosb
-    a = p(1, 1)
-    b = matmul(rot, dx) + a
+    br = matmul(rot, dx) + a
 
     cosb = cos(.25 * pi)
     sinb = cosb
-    r = abs(a(2) - b(2)) / (2. * sinb)
-    do i = 2, m - 1
-      p(i, :) = p(1, :)
+    r = abs(a(2) - br(2)) / (2. * sinb)
+    do i = 1, m - 1
+      p(i, :) = a
     end do
     dx =  k * r * (/ sinb, cosb /)
     rot = inv(rot)
     p(m, :) = matmul(rot, dx) + a
-    p(m + 1, :) = matmul(rot, b + dx - a) + a
-    do i = m + 2, n - 1
-      p(i, :) = p(n, :)
+    p(m + 1, :) = matmul(rot, br + dx - a) + a
+    do i = m + 2, n
+      p(i, :) = b
     end do
-  end subroutine
+  end function
 
   pure function bezc(t, p) result(c)
     real, intent(in) :: t, p(:, :)
@@ -48,8 +49,8 @@ contains
     integer :: i, n
 
     c = 0
-    if(t < 0 .or. t > 1) return
-    n = size(p, 2) - 1
+    if(t < 0 .or. t > 1) error stop
+    n = size(p, 1) - 1
     do i = 0, n
       c = c + b(t, i, n) * p(:, i+1)
     end do
@@ -78,15 +79,19 @@ contains
     end function
   end function
 
-  pure subroutine bezl(p)
-    real, intent(inout) :: p(:, :)
-    integer :: i, n
+  pure function bezl(n, a, b) result(p)
+    integer, intent(in) :: n
+    real, intent(in) :: a(:), b(:)
+    real :: dx(size(a)), p(n, size(a))
+    integer :: i, j, m
 
-    n = size(p, 1)
-    do i = 1, n - 1
-      p(i, :) = (p(n, :) - p(1, :)) * real(i) / n + p(1, :)
+    dx = b - a
+    m = n - 1
+    do i = 0, m
+      j = i + 1
+      p(j, :) = dx * real(i) / m + a
     end do
-  end subroutine
+  end function
 
   pure function inv(a) result(b)
     real, intent(in) :: a(2, 2)
