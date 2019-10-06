@@ -79,6 +79,46 @@ contains
     end function
   end function
 
+  pure function bezfit(x, tol) result(p)
+    real, intent(in) :: x(:, :), tol
+    real :: a(size(x, 1)), a1, a2, a12, d, t, t1, p(4, 2)
+    real, dimension(2) :: c1, c2, c12
+    integer :: i, j, k, n
+    logical ::
+
+    n = size(x, 1)
+    k = n - 1
+    p(1, :) = x(1, :)
+    p(4, :) = x(n, :)
+
+    a1 = 0
+    a2 = 0
+    a12 = 0
+    do i = 0, k
+      t = real(i) / k
+      t1 = 1. - t
+      a1 = a1 + t**2 * t1**4
+      a2 = a2 + t**4 * t1**2
+      a12 = a12 + t**3 * t1**3
+      c12 = x(i + 1, :) - t1**3 * p(1, :) - t**3 * p(4, :)
+      c1 = c1 + 3. * t * t1**2 * c12
+      c2 = c2 + 3. * t**2 * t1 * c12
+    end do
+    a1 = 9. * a1
+    a2 = 9. * a2
+    a12 = 9. * a12
+    d = (a1 * a2 - a12 * a12)
+    p(2, :) = (a2 * c1 - a12 * c2) / d
+    p(3, :) = (a1 * c2 - a12 * c1) / d
+
+    do concurrent(i = 0:k)
+      t = real(i) / k
+      a(i + 1) = norm2(x(i + 1, :) - bezc(t, p))
+    end do
+    if (all(a < tol)) return
+    n = maxloc(a)
+  end function
+
   pure function bezl(n, a, b) result(p)
     integer, intent(in) :: n
     real, intent(in) :: a(:), b(:)

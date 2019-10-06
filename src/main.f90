@@ -159,9 +159,9 @@ program main
   character(len=255) :: arg, input, msg
   character(len=4) :: mode
   integer :: id, stat
-  real :: alpha
+  real :: rd
 
-  namelist /CONFIG/ alpha, input, mode
+  namelist /CONFIG/ input, mode, rd
 
   if(command_argument_count() /= 1) call fatal('control file missing.')
   call get_command_argument(1, arg)
@@ -180,7 +180,7 @@ contains
   pure subroutine mos(p, slices, stat)
     real, intent(in) :: p(:, :)
     type(slice), intent(out) :: slices(:)
-    integer, intent(in) :: stat
+    integer, intent(out) :: stat
     real :: c(size(p, 2)), t(0:size(slices)), y(size(slices)+1)
     integer :: i, j, k, n
     type(stratum) :: s
@@ -199,7 +199,7 @@ contains
       return
     end if
     y = slope_top(xy(:, 1))
-    do i = 1, n
+    do concurrent(i = 1:n)
       j = i + 1
       h(1) = y(i) - xy(i, 2)
       h(2) = y(j) - xy(j, 2)
@@ -211,6 +211,7 @@ contains
       c = .5 * (xy(j, :) + xy(i, :))
       s = slope_stratum(c(1), c(2))
       ! usw
+      slices(i) = 0
     end do
   end subroutine
 end program
