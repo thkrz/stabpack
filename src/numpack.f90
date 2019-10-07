@@ -81,13 +81,14 @@ contains
 
   pure function bezfit(x, tol) result(p)
     real, intent(in) :: x(:, :), tol
-    real :: a(size(x, 1)), a1, a2, a12, d, t, t1, p(4, 2)
+    real :: a(size(x, 1)), a1, a2, a12, d, t, t1
+    real, allocatable :: p(:, :), q(:, :), r(:, :)
     real, dimension(2) :: c1, c2, c12
     integer :: i, j, k, n
-    logical ::
 
     n = size(x, 1)
     k = n - 1
+    allocate(p(4, 2))
     p(1, :) = x(1, :)
     p(4, :) = x(n, :)
 
@@ -116,7 +117,18 @@ contains
       a(i + 1) = norm2(x(i + 1, :) - bezc(t, p))
     end do
     if (all(a < tol)) return
+
     n = maxloc(a)
+    q = bezfit(x(:n, :), tol)
+    r = bezfit(x(n:, :), tol)
+    n = size(q, 1) + size(r, 1) - 1
+    deallocate(p)
+    allocate(p(n, 2))
+    do concurrent(i = 1:2)
+      p(:, i) = [q(:, i), r(2:, i)]
+    end do
+    deallocate(q)
+    deallocate(r)
   end function
 
   pure function bezl(n, a, b) result(p)
