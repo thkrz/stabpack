@@ -15,7 +15,7 @@ contains
     real :: br(2), dx(2), p(n, 2)
     real :: beta, cosb, sinb, r, rot(2, 2)
 
-    if (n % 2 /= 0) error stop
+    if (mod(n, 2) /= 0) error stop
 
     m = n / 2
     dx = b - a
@@ -79,7 +79,7 @@ contains
     end function
   end function
 
-  pure function bezfit(x, tol) result(p)
+  pure recursive function bezfit(x, tol) result(p)
     real, intent(in) :: x(:, :), tol
     real :: a(size(x, 1)), a1, a2, a12, d, t, t1
     real, allocatable :: p(:, :), q(:, :), r(:, :)
@@ -118,15 +118,17 @@ contains
     end do
     if (all(a < tol)) return
 
-    n = maxloc(a)
-    q = bezfit(x(:n, :), tol)
-    r = bezfit(x(n:, :), tol)
-    n = size(q, 1) + size(r, 1) - 1
+    k = maxloc(a)
+    if (k < 3 .or. n - k < 3) return
+
+    q = bezfit(x(:k, :), tol)
+    r = bezfit(x(k:, :), tol)
+    n = size(q, 1)
+    k = size(r, 1)
     deallocate(p)
-    allocate(p(n, 2))
-    do concurrent(i = 1:2)
-      p(:, i) = [q(:, i), r(2:, i)]
-    end do
+    allocate(p(n + k - 1, 2))
+    p(:n, :) = q
+    p(n:, :) = r
     deallocate(q)
     deallocate(r)
   end function
