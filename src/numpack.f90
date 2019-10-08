@@ -84,7 +84,7 @@ contains
     real :: a(size(x, 1)), a1, a2, a12, d, t, t1
     real, allocatable :: p(:, :), q(:, :), r(:, :)
     real, dimension(2) :: c1, c2, c12
-    integer :: i, j, k, n
+    integer :: i, k, n
 
     n = size(x, 1)
     k = n - 1
@@ -118,7 +118,7 @@ contains
     end do
     if (all(a < tol)) return
 
-    k = maxloc(a)
+    k = maxloc(a, 1)
     if (k < 3 .or. n - k < 3) return
 
     q = bezfit(x(:k, :), tol)
@@ -166,8 +166,6 @@ module fmin
   private
   public amoeba
 
-  integer, parameter :: MAXIT = 1000
-
 contains
   pure subroutine amoeba(fcn, x, tol, fn, stat)
     interface
@@ -185,7 +183,7 @@ contains
             xx(size(x), size(x)+1), xc(size(x)), &
             xe(size(x)), xr(size(x)), xtmp(size(x)), &
             ident(size(x), size(x)), p(size(x)), p1, p2, facc
-    integer :: i, j, k, n
+    integer :: i, j, k, maxit, n
 
     n = size(x)
     alpha = 1.
@@ -209,7 +207,8 @@ contains
     end do
     facc = merge(tol, sqrt(epsilon(1.)), present(tol))
     if(present(stat)) stat = 0
-    do i = 1, MAXIT
+    maxit = n * 200
+    do i = 1, maxit
       do j = 2, n+1
         k = j - 1
         ftmp = f(j)
@@ -293,7 +292,7 @@ module rtfind
   public rtnewt
   public zbrent
 
-  integer, parameter :: MAXIT = 100
+  integer, parameter :: MAXIT = 1000
 
 contains
   pure subroutine rtnewt(funcd, x1, x2, x, tol, stat)

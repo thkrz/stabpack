@@ -1,6 +1,6 @@
 include config.mk
 
-OBJ = src/hydropack.o src/leqpack.o src/stabpack.o \
+OBJ = src/aquapack.o src/numpack.o src/stabpack.o \
       src/main.o
 
 %.o: %.f90
