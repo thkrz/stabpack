@@ -119,7 +119,7 @@ contains
     if (all(a < tol)) return
 
     k = maxloc(a, 1)
-    if (k < 3 .or. n - k < 3) return
+    if (k < 3 .or. n - k < 2) return
 
     q = bezfit(x(:k, :), tol)
     r = bezfit(x(k:, :), tol)
