@@ -99,7 +99,6 @@ contains
     a12 = 0
     c1 = 0
     c2 = 0
-    c12 = 0
     do i = 0, k
       t = real(i) / k
       t1 = 1. - t
