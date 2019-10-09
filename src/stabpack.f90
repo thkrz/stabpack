@@ -1,6 +1,7 @@
 module razdol
   implicit none
   private
+  public razd
   public razslv
 
 contains
@@ -22,7 +23,7 @@ contains
       tanp = tan(phi(j))
       de(i) = cosa2 * (6. * f * dt(j) * (f * tana - tanp) &
             + (2. * b(j) * w(j) * h(j) + b(j) * w(j) * h(i) &
-            + 6. * t(j) - 6. * e(j) * tana) * tanp + 3. * b(j)/cosa2 &
+            + 6. * t(j) - 6. * e(j) * tana) * tanp + 3. * b(j) / cosa2 &
             * (c(j) - u(j) * tanp) + 3. * f * de(j) &
             * (f - f * tana**2 + 2. * tana * tanp))
       de(i) = de(i) / (3. * f**2)
@@ -32,7 +33,7 @@ contains
     mu = (de(i) * e(n + 1) - de(n + 1) * e(i)) / e(i)**2
   end function
 
-  pure subroutine razd(f, wa, fval, deriv)
+  pure subroutine razd(f, wa, fval, fderiv)
     integer, parameter :: nwa = 7
     real, intent(in) :: f, wa(:)
     real, intent(out) :: fval, fderiv
@@ -41,12 +42,12 @@ contains
     integer :: n
 
     n = size(wa) / nwa
-    associate(w => wa(:n),
-      c => wa(n+1:2*n),
-      phi => wa(2*n+1:3*n),
-      u => wa(3*n+1:4*n),
-      alpha => wa(4*n+1:5*n),
-      b => wa(5*n+1:6*n),
+    associate(w => wa(:n),&
+      c => wa(n+1:2*n),&
+      phi => wa(2*n+1:3*n),&
+      u => wa(3*n+1:4*n),&
+      alpha => wa(4*n+1:5*n),&
+      b => wa(5*n+1:6*n),&
       h => wa(6*n+1:))
 
       call razslv(n, w, c, phi, u, alpha, b, h, f, e, t, mu)

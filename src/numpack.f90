@@ -88,6 +88,7 @@ contains
     integer :: i, k, n
 
     n = size(x, 1)
+    if (n < 3) error stop
     k = n - 1
     allocate(p(4, 2))
     p(1, :) = x(1, :)
@@ -96,6 +97,9 @@ contains
     a1 = 0
     a2 = 0
     a12 = 0
+    c1 = 0
+    c2 = 0
+    c12 = 0
     do i = 0, k
       t = real(i) / k
       t1 = 1. - t
