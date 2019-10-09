@@ -3,6 +3,7 @@ module bez
   private
   public beza
   public bezc
+  public bezfit
   public bezl
 
 contains
