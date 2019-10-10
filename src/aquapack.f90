@@ -21,6 +21,14 @@ module grndwt
   public piezom
 
 contains
+  elemental function hydro(h)
+    real, parameter :: g = 9.81, rho = 1.
+    real, intent(in) :: h
+    real :: hydro
+
+    hydro = rho * g * h
+  end function
+
   elemental function piezom(x, h0, l) result(h)
     real, intent(in) :: x, h0, l
     real :: h
