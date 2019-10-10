@@ -55,9 +55,10 @@ contains
     real, dimension(2) :: m, q, r
     integer :: i
 
-    stat = 0
     d = rd * norm2(p(1, :) - p(size(p, 1), :))
+    h(0) = 0
     q = p(1, :)
+    stat = 0
     do i = 1, n
       r = bezc(real(i)/n, p)
       if(q(1) > r(1)) then
@@ -67,7 +68,6 @@ contains
       if(scxtop(r(1)) - s
 
       b(i) = r(1) - q(1)
-      h(i-1) = scxtop(q(1)) - q(2)
       h(i) = scxtop(r(1)) - r(2)
       if(h(i) < 0 .or. h(i) < d) then
         stat = i
