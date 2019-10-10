@@ -42,9 +42,9 @@ contains
     y = interp(x, xe, ye)
   end function
 
-  pure subroutine scxslc(rel, p, n, w, c, phi, u, alpha, b, h, stat)
-    real, intent(in) :: rel, p(:, :)
+  pure subroutine scxslc(n, rel, p, w, c, phi, u, alpha, b, h, stat)
     integer, intent(in) :: n
+    real, intent(in) :: rel, p(:, :)
     real, intent(out), dimension(n) :: w, c, phi, u, alpha, b
     real, intent(out) :: h(0:n)
     integer, intent(out) :: stat
