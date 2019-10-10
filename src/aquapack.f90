@@ -1,3 +1,20 @@
+module air
+  implicit none
+  private
+  public barom
+
+contains
+  elemental function barom(h)
+    real, parameter :: p0 = 101.325,&
+      T0 = 288.15,&
+      dT = .0065
+    real, intent(in) :: h
+    real :: barom
+
+    barom = p0 * (1. - dT * h / T0)**5.255
+  end function
+end module
+
 module grndwt
   implicit none
   private
