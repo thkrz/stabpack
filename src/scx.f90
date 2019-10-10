@@ -1,13 +1,21 @@
 module scx
   use air, only: barom
   use bez, only: bezc
+  use grndwt, only: hsp, piezom
   use interp1d, only: interp
   use vgmod, only: vgms
   implicit none
   private
+  public scxcrk
+  public scxdel
+  public scxnew
+  public scxslc
+  public scxtop
+  public scxvar
 
   type stra_t
-    real h
+    real xoc
+    real yoc
     real w
     real phi
     real c
@@ -19,12 +27,14 @@ module scx
     real k
   end type
 
+  real :: tana
+
 contains
   elemental function scxcrk(x) result(y)
     real, intent(in) :: x
     real :: y
 
-    y = 0
+    y = yoc + tana * (x - xoc)
     ! z = 2. * c / w * tan(atan(1.) + .4 * phi)
   end function
 
@@ -35,16 +45,9 @@ contains
     character(*), intent(in) :: name
   end subroutine
 
-  elemental function scxtop(x) result(y)
-    real, intent(in) :: x
-    real :: y
-
-    y = interp(x, xe, ye)
-  end function
-
-  pure subroutine scxslc(n, rel, p, w, c, phi, u, alpha, b, h, stat)
+  pure subroutine scxslc(n, rd, p, w, c, phi, u, alpha, b, h, stat)
     integer, intent(in) :: n
-    real, intent(in) :: rel, p(:, :)
+    real, intent(in) :: rd, p(:, :)
     real, intent(out), dimension(n) :: w, c, phi, u, alpha, b
     real, intent(out) :: h(0:n)
     integer, intent(out) :: stat
@@ -53,7 +56,7 @@ contains
     integer :: i, j
 
     stat = 0
-    d = rel * norm2(p(1, :) - p(size(p, 1), :))
+    d = rd * norm2(p(1, :) - p(size(p, 1), :))
     q = p(1, :)
     do i = 1, n
       j = i - 1
@@ -80,17 +83,32 @@ contains
     end do
   end subroutine
 
+  elemental function scxtop(x) result(y)
+    real, intent(in) :: x
+    real :: y
+
+    y = interp(x, xe, ye)
+  end function
+
   pure subroutine scxvar(x, y, c, phi, w, u)
     real, intent(in) :: x, y
     real, intent(out) :: c, phi, w, u
+    real :: ua, uw
 
     c = 0
     phi = 0
     w = 0
     u = 0
-    ! w_i = sum(w(:i))
-    ! t = (theta - res) / (sat - res)
+    ! w = sum(w(:i))
+    ! t = min(max((theta - res) / (sat - res), 0.), 1.)
     ! ua = barom(y)
-    ! u = ua - t * vgms(t, a, n)
+    ! uw = 0
+    ! if(t == 1.) then
+    !   y0 = scxtop(l) + piezom(x, h, l)
+    !   uw = max(hsp(y0 - y), 0)
+    ! else if(t > 0) then
+    !   uw = t * vgms(t, a, n)
+    ! end if
+    ! u = ua - uw
   end subroutine
 end module

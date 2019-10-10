@@ -3,11 +3,11 @@ module air
   private
   public barom
 
+  real, parameter :: p0 = 101.325, T0 = 288.15
+
 contains
   elemental function barom(h)
-    real, parameter :: p0 = 101.325,&
-      T0 = 288.15,&
-      dT = .0065
+    real, parameter :: dT = .0065
     real, intent(in) :: h
     real :: barom
 
@@ -18,22 +18,23 @@ end module
 module grndwt
   implicit none
   private
+  public hsp
   public piezom
 
 contains
-  elemental function hydro(h)
-    real, parameter :: g = 9.81, rho = 1.
+  elemental function hsp(h)
+    real, parameter :: g = 9.81 !, rho = 1.
     real, intent(in) :: h
-    real :: hydro
+    real :: hsp
 
-    hydro = rho * g * h
+    hsp = g * h
   end function
 
-  elemental function piezom(x, h0, l) result(h)
-    real, intent(in) :: x, h0, l
+  elemental function piezom(x, dh, l) result(h)
+    real, intent(in) :: x, dh, l
     real :: h
 
-    h = h0 * sqrt(1. - (x / l)**2)
+    h = dh * sqrt(1. - (x / l)**2)
   end function
 end module
 
