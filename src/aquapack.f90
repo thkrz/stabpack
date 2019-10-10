@@ -1,4 +1,18 @@
-module vg
+module grndwt
+  implicit none
+  private
+  public piezom
+
+contains
+  elemental function piezom(x, h0, l) result(h)
+    real, intent(in) :: x, h0, l
+    real :: h
+
+    h = h0 * sqrt(1. - (x / l)**2)
+  end function
+end module
+
+module vgmod
   implicit none
   private
   public vgms
@@ -8,11 +22,13 @@ module vg
 contains
   elemental function vgms(t, a, n)
     real, intent(in) :: t, a, n
-    real :: m, mt, vgms
+    real :: m, me, mt, vgms
 
     m = 1. - 1. / n
+    me = a * (.046 * m + 2.07 * m**2 + 19.5 * m**3) &
+       / (1. + 4.7 * m + 16. * m**2)
     mt = t**(1. / m)
-    vgms = 1. / a * ((1 - mt) / mt)**(1. / n)
+    vgms = max(1. / a * ((1 - mt) / mt)**(1. / n), me)
   end function
 
   elemental function vgrhc(t, n)

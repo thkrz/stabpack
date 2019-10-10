@@ -27,7 +27,7 @@ contains
             * (c(j) - u(j) * tanp) + 3. * f * de(j) &
             * (f - f * tana**2 + 2. * tana * tanp))
       de(i) = de(i) / (3. * f**2)
-      dt(i) = (de(i) + de(j)) * tana + dt(j)
+      dt(i) = (de(i) + de(j)) * tana - dt(j)
     end do
     i = maxloc(e, 1)
     mu = (de(i) * e(n + 1) - de(n + 1) * e(i)) / e(i)**2
