@@ -53,13 +53,12 @@ contains
     integer, intent(out) :: stat
     real :: d
     real, dimension(2) :: m, q, r
-    integer :: i, j
+    integer :: i
 
     stat = 0
     d = rd * norm2(p(1, :) - p(size(p, 1), :))
     q = p(1, :)
     do i = 1, n
-      j = i - 1
       r = bezc(real(i)/n, p)
       if(q(1) > r(1)) then
         stat = -i
@@ -68,7 +67,7 @@ contains
       if(scxtop(r(1)) - s
 
       b(i) = r(1) - q(1)
-      h(j) = scxtop(q(1)) - q(2)
+      h(i-1) = scxtop(q(1)) - q(2)
       h(i) = scxtop(r(1)) - r(2)
       if(h(i) < 0 .or. h(i) < d) then
         stat = i
