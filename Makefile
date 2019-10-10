@@ -1,7 +1,7 @@
 include config.mk
 
 OBJ = src/aquapack.o src/numpack.o src/stabpack.o \
-      src/main.o
+      src/scx.o src/main.o
 
 %.o: %.f90
 	@echo FC $<

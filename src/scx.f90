@@ -13,6 +13,12 @@ module scx
   public scxtop
   public scxvar
 
+  type aqua_t
+    real h
+    real l
+    real y
+  end type
+
   type stra_t
     real xoc
     real yoc
@@ -27,6 +33,7 @@ module scx
     real k
   end type
 
+  real, allocatable :: xe(:), ye(:)
   real :: tana
 
 contains
@@ -34,7 +41,8 @@ contains
     real, intent(in) :: x
     real :: y
 
-    y = yoc + tana * (x - xoc)
+    y = 0
+    ! y = yoc + tana * (x - xoc)
     ! z = 2. * c / w * tan(atan(1.) + .4 * phi)
   end function
 
@@ -65,11 +73,10 @@ contains
         stat = -i
         return
       end if
-      if(scxtop(r(1)) - s
 
       b(i) = r(1) - q(1)
       h(i) = scxtop(r(1)) - r(2)
-      if(h(i) < 0 .or. h(i) < d) then
+      if(h(i) < 0 .or. h(i) > d) then
         stat = i
         return
       end if
