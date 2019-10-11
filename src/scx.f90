@@ -7,11 +7,12 @@ module scx
   implicit none
   private
   public scxcrk
+  public scxcut
+  public scxdim
   public scxdel
+  public scxmat
   public scxnew
-  public scxslc
   public scxtop
-  public scxvar
 
   type aqua_t
     real h
@@ -33,8 +34,8 @@ module scx
     real k
   end type
 
-  real, allocatable :: xe(:), ye(:)
-  real :: tana
+  real, allocatable :: xs(:), ys(:)
+  real :: scxdim(2), tana
 
 contains
   elemental function scxcrk(x) result(y)
@@ -46,14 +47,7 @@ contains
     ! z = 2. * c / w * tan(atan(1.) + .4 * phi)
   end function
 
-  subroutine scxdel
-  end subroutine
-
-  subroutine scxnew(name)
-    character(*), intent(in) :: name
-  end subroutine
-
-  pure subroutine scxslc(n, rd, p, w, c, phi, u, alpha, b, h, stat)
+  pure subroutine scxcut(n, rd, p, w, c, phi, u, alpha, b, h, stat)
     integer, intent(in) :: n
     real, intent(in) :: rd, p(:, :)
     real, intent(out), dimension(n) :: w, c, phi, u, alpha, b
@@ -89,14 +83,10 @@ contains
     end do
   end subroutine
 
-  elemental function scxtop(x) result(y)
-    real, intent(in) :: x
-    real :: y
+  subroutine scxdel
+  end subroutine
 
-    y = interp(x, xe, ye)
-  end function
-
-  pure subroutine scxvar(x, y, c, phi, w, u)
+  pure subroutine scxmat(x, y, c, phi, w, u)
     real, intent(in) :: x, y
     real, intent(out) :: c, phi, w, u
     real :: ua, uw
@@ -117,4 +107,17 @@ contains
     ! end if
     ! u = ua - uw
   end subroutine
+
+  subroutine scxnew(name)
+    character(*), intent(in) :: name
+
+    scxdim = (/ xs(size(xs)) - xs(1), maxval(ys) - minval(ys) /)
+  end subroutine
+
+  elemental function scxtop(x) result(y)
+    real, intent(in) :: x
+    real :: y
+
+    y = interp(x, xs, ys)
+  end function
 end module
