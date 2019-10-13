@@ -1,7 +1,8 @@
 include config.mk
 
-OBJ = src/fldpack.o src/numpack.o src/stabpack.o \
-      src/ssat_env.o src/scx.o src/main.o
+OBJ = src/pwppack.o src/mospack.o src/numpack.o \
+      src/ssat_env.o src/scx.o src/wasim.o \
+			src/main.o
 
 %.o: %.f90
 	@echo FC $<
@@ -14,7 +15,13 @@ lbfgsb:
 
 ssat: ${OBJ}
 	@echo LD $@
-	@${FC} -o $@ ${OBJ} ${LDFLAGS}
+	@${FC} -o $@ $^ ${LDFLAGS}
+
+test: hyp2f1
+
+hyp2f1: src/numpack.o test/hyp2f1.o
+	@echo LD $@
+	@${FC} -o test/$@ $^ ${LDFLAGS}
 
 clean:
 	@echo cleaning...

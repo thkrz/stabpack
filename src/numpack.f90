@@ -413,3 +413,32 @@ contains
     if(present(stat)) stat = -2
   end subroutine
 end module
+
+module spec
+  implicit none
+  private
+  public hyp2f1
+
+contains
+  elemental function hyp2f1(a, b, c, z) result(f1)
+    integer, parameter :: maxit = 1000
+    real, intent(in) :: a, b, c, z
+    real :: aa, bb, cc, f1, fac, temp
+    integer :: n
+
+    fac = 1.
+    temp = fac
+    aa = a
+    bb = b
+    cc = c
+    do n = 1, maxit
+      fac = fac * ((aa * bb) / cc) * z / n
+      f1 = temp + fac
+      if(f1 == temp) return
+      temp = f1
+      aa = aa + 1.
+      bb = bb + 1.
+      cc = cc + 1.
+    end do
+  end function
+end module

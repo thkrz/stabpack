@@ -1,9 +1,8 @@
 module scx
-  use air, only: barom
   use bez, only: bezc
-  use grndwt, only: hsp, piezom
   use interp1d, only: interp
-  use vgmod, only: vgms
+  use pwp, only: barom, hystp
+  use swc, only: swcms
   implicit none
   private
   public scxcrk
@@ -21,8 +20,8 @@ module scx
   end type
 
   type stra_t
-    real xoc
-    real yoc
+    real x
+    real y
     real w
     real phi
     real c
@@ -77,7 +76,7 @@ contains
 
       alpha(i) = asin((q(2) - r(2)) / b(i))
       m = .5 * (q + r)
-      call scxvar(m(1), m(2), c(i), phi(i), w(i), u(i))
+      call scxmat(m(1), m(2), c(i), phi(i), w(i), u(i))
 
       q = r
     end do
@@ -101,7 +100,8 @@ contains
     ! uw = 0
     ! if(t == 1.) then
     !   y0 = scxtop(l) + piezom(x, h, l)
-    !   uw = max(hsp(y0 - y), 0)
+    !   uw = -max(hsp(y0 - y), 0)
+    !   ua = 0
     ! else if(t > 0) then
     !   uw = t * vgms(t, a, n)
     ! end if
