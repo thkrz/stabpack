@@ -1,8 +1,8 @@
 include config.mk
 
-OBJ = src/pwppack.o src/mospack.o src/numpack.o \
+OBJ = src/mospack.o src/numpack.o src/wapack.o \
       src/ssat_env.o src/scx.o src/wasim.o \
-			src/main.o
+      src/main.o
 
 %.o: %.f90
 	@echo FC $<

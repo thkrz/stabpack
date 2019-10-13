@@ -5,9 +5,9 @@ module scx
   use swc, only: swcms
   implicit none
   private
+  protected scxdim
   public scxcrk
   public scxcut
-  public scxdim
   public scxdel
   public scxmat
   public scxnew

@@ -441,4 +441,32 @@ contains
       cc = cc + 1.
     end do
   end function
+
+  pure function simpn(fcn, a, b, n) result(f)
+    interface
+      pure function fcn(x)
+        real, intent(in) :: x
+        real :: fcn
+      end function
+    end interface
+    real, intent(in) :: a, b
+    integer, intent(in), optional :: n
+    real :: f, f0, f1, f12, h, x0, x1
+    integer :: k
+
+    k = 3
+    if(present(n)) k = n
+    f = 0
+    h = (b - a) / k
+    x0 = a
+    f0 = fcn(x0)
+    do i = 1, k
+      x1 = x0 + h
+      f1 = fcn(x1)
+      f12 = fcn((x0 + x1) / 2.)
+      f = f + h / 6. * (f0 + 4. * f12 + f1)
+      x0 = x1
+      f0 = f1
+    end do
+  end function
 end module

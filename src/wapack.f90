@@ -29,9 +29,9 @@ end module
 module swc
   implicit none
   private
-  public swcms
-  public swcrhc
-  public swcewc
+  protected swcms
+  protected swcrhc
+  protected swcewc
   public swcset
 
   abstract interface
@@ -54,9 +54,9 @@ contains
       swcrhc => bcrhc
       swcewc => bcewc
     else if(model == 'fx') then
-      swcms => null()
+      swcms => fxms
       swcrhc => null()
-      swcewc => null()
+      swcewc => fxewc
     else if(model == 'vg') then
       swcms => vgms
       swcrhc => vgrhc
@@ -64,12 +64,12 @@ contains
     end if
   end subroutine
 
-  pure function bcms(h, p)
-    real, intent(in) :: h, p(:)
+  pure function bcms(t, p)
+    real, intent(in) :: t, p(:)
     real :: bcms
 
     associate(hb => p(1), lambda => p(2))
-      bcms = h
+      bcms = hb * t**(-1. / lambda)
     end associate
   end function
 
@@ -79,8 +79,8 @@ contains
 
     bcrhc = 1
     associate(hb => p(1), lambda => p(2))
-      if(h >= hb) return
-      bcrhc = (h / hb)**(-2. - 3. * lambda)
+      if(h < hb) return
+      bcrhc = (hb / h)**(2. + 5. / 2. * lambda)
     end associate
   end function
 
@@ -90,8 +90,32 @@ contains
 
     bcewc = 1
     associate(hb => p(1), lambda => p(2))
-      if(h >= hb) return
-      bcewc = (h / hb)**(-lambda)
+      if(h < hb) return
+      bcewc = (hb / h)**lambda
+    end associate
+  end function
+
+  pure function fxms(t, p)
+    real, intent(in) :: t, p(:)
+    real :: fxms
+
+    associate(a => p(1), n => p(2), m => p(3))
+      fxms = a * (exp(t**(-1. / m)) - exp(1.))**(1. / n)
+    end associate
+  end function
+
+  pure function fxewc(h, p)
+    real, intent(in) :: h, p(:)
+    real :: c, fxewc
+
+    c = 1
+    if(size(p) == 4) then
+      associate(hb => p(4))
+        c = log(1. + h / hb) / log(1. + 1e06 / hb)
+      end associate
+    end if
+    associate(a => p(1), n => p(2), m => p(3))
+      fxwec = c * log(exp(1.) + (h / a)**n)**(-m)
     end associate
   end function
 
@@ -109,11 +133,14 @@ contains
 
   pure function vgrhc(t, p)
     real, intent(in) :: t, p(:)
-    real :: m, vgrhc
+    real :: ah, m, vgrhc
 
-    associate(n => p(2))
+    associate(a => p(1), n => p(2))
       m = 1. - 1. / n
-      vgrhc = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
+      ! vgrhc = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
+      ah = (a * h)**n
+      vgrhc = (1. - ah**m * (1. + ah)**(-m))**2 &
+            / (1. + ah)**(m / 2.)
     end associate
   end function
 
