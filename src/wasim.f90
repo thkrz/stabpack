@@ -45,8 +45,8 @@ contains
   contains
     pure function psi(t)
       real, intent(in) :: t
-      real :: c1, c2, psi, nn, n3, tt, t32
-      real :: h1, h2, h3, h4, h5
+      real :: a, b, c, c1, c2, psi, nn, n3, tt, t32,&
+              h1, h2, h3, h4, h5
 
       nn = 1. / (n - 1.)
       tt = t**nn
