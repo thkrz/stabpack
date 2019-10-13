@@ -418,6 +418,7 @@ module spec
   implicit none
   private
   public hyp2f1
+  public simpn
 
 contains
   elemental function hyp2f1(a, b, c, z) result(f1)
@@ -452,7 +453,7 @@ contains
     real, intent(in) :: a, b
     integer, intent(in), optional :: n
     real :: f, f0, f1, f12, h, x0, x1
-    integer :: k
+    integer :: i, k
 
     k = 3
     if(present(n)) k = n

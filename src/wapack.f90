@@ -29,9 +29,9 @@ end module
 module swc
   implicit none
   private
-  protected swcms
-  protected swcrhc
-  protected swcewc
+  public swcms
+  public swcrhc
+  public swcewc
   public swcset
 
   abstract interface
@@ -115,7 +115,7 @@ contains
       end associate
     end if
     associate(a => p(1), n => p(2), m => p(3))
-      fxwec = c * log(exp(1.) + (h / a)**n)**(-m)
+      fxewc = c * log(exp(1.) + (h / a)**n)**(-m)
     end associate
   end function
 
@@ -133,14 +133,11 @@ contains
 
   pure function vgrhc(t, p)
     real, intent(in) :: t, p(:)
-    real :: ah, m, vgrhc
+    real :: m, vgrhc
 
     associate(a => p(1), n => p(2))
       m = 1. - 1. / n
-      ! vgrhc = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
-      ah = (a * h)**n
-      vgrhc = (1. - ah**m * (1. + ah)**(-m))**2 &
-            / (1. + ah)**(m / 2.)
+      vgrhc = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
     end associate
   end function
 

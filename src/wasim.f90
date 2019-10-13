@@ -12,65 +12,43 @@ contains
 end module
 
 module wasim
-  use spec, only: hyp2f1
+  use spec, only: simpn
+  use swc
   implicit none
   private
+
+  real, allocatable :: p(:)
 
 contains
   pure subroutine seep
     ! dz = 1. / (td - ti) * (K(td)*psi(td)/z(i) + K(td))
   end subroutine
 
-  pure function k2(a, b)
+  pure function k(a, b)
     real, intent(in) :: a, b
-    real :: k2
+    real :: k
 
-    k2 = (k(b) - k(a)) / (b - a)
+    k = simpn(qk, a, b) / (b - a)
   contains
-    pure function k(t)
+    pure function qk(t)
       real, intent(in) :: t
-      real :: k, nn, tt
+      real :: qk
 
-      tt = t**(n / (n - 1.))
-      nn = 1. / n
-      k = -t / a * (tt - 1.)**(1. + nn) * hyp2f1(1., 2., 2. - nn, tt)
+      qk = swcrhc(t, p)
     end function
   end function
 
-  pure function psi2(a, b)
+  pure function psi(a, b)
     real, intent(in) :: a, b
-    real :: psi2
+    real :: psi
 
-    psi2 = (psi(b) - psi(a)) / (b - a)
+    psi = simpn(qpsi, a, b) / (b - a)
   contains
-    pure function psi(t)
+    pure function qpsi(t)
       real, intent(in) :: t
-      real :: a, b, c, c1, c2, psi, nn, n3, tt, t32,&
-              h1, h2, h3, h4, h5
+      real :: qpsi
 
-      nn = 1. / (n - 1.)
-      tt = t**nn
-      t32 = t**(3. / 2.)
-      c1 = 6. * (n - 1.) * t**(5. / 2 + nn) / (5. * n - 3.)
-      c2 = 3. * (n - 1.) * t**(7. / 2. + 2. * nn) / (7. * n - 3.)
-      n3 = 3. / (2. * n)
-      a = 5. / 2. - n3
-      b = 1. / n
-      c = 7. / 2. - n3
-      h1 = hyp2f1(a, b, c, tt)
-      b = 2. * b
-      h2 = hyp2f1(a, b, c, tt)
-      a = c
-      c = 9. / 2. - n3
-      h3 = hyp2f1(a, b, c, tt)
-      a = 1. / n
-      b = n3 * (n - 1.)
-      c = 5. / 2. - n3
-      h4 = hyp2f1(a, b, c, tt)
-      a = a * 2.
-      h5 = hyp2f1(a, b, c, tt)
-      psi = 2. / 3. * (t32 + c1 * (h1 - h2) + c2 * h3 &
-          - 2. * t32 * h4 + t32 * h5
+      qpsi = swcms(t, p)
     end function
   end function
 end module
