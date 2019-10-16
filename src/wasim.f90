@@ -20,7 +20,21 @@ module wasim
   real, allocatable :: p(:)
 
 contains
-  pure subroutine seep
+  pure subroutine seep(n, t0)
+    integer, intent(in) :: n
+    real, intent(in) :: t0
+    integer :: d, e, i, j, k
+    real :: eps, k(n), psi(n), t
+    
+    d = n
+    e = n
+    eps = 1. / (2. * n)
+    do j = 1, k
+      i = j - 1
+      t = real(i) / n
+      if(abs(t - t0) < eps) exit
+    end do    
+    
     ! dz = 1. / (td - ti) * (K(td)*psi(td)/z(i) + K(td))
   end subroutine
 
