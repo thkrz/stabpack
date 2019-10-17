@@ -24,25 +24,30 @@ contains
     integer, intent(in) :: n
     real, intent(in) :: t0
     integer :: d, i, j
-    real :: a, b, eps, k(n), psi(n), t(0:n), z(n), zd
+    real :: dz, eps, k(n), psi(n), t(0:n), z(n), zd
    
     eps = 1. / (2. * n)
     t = 0
     do j = 1, n
       t(j) = real(i) / n
-      if(abs(t(j) - t0) < eps) i = j
+      if(abs(t(j) - t0) < eps) i = j - 1
     end do
     
     do concurrent(j = i:n-1)
-      k(j) = simpn(k2, t(i), t(i+1))
-      psi(j) = simpn(psi2, t(i), t(i+1))
+      k(j) = simpn(k2, t(j), t(j+1))
+      psi(j) = simpn(psi2, t(j), t(j+1))
     end do
     
     d = n
     z = zd
-    do
+  start:
       do j = i+1, d
-        z(j) = s1. / (t(d) - t(i)) * (k(d) * psi(d) / z(j-1) + k(d))
+        z(j) = (1. / (t(d) - t(i)) * (k(d) * psi(d) / z(j-1) + k(d))) * dt + z(j-1)
+        mm = mm - z(j) * k(d)
+        if(mm <= 0) then
+          d = j
+          exit
+        end if
       end do
     end do
     
