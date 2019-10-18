@@ -12,6 +12,7 @@ contains
 end module
 
 module wasim
+  use rtfind only: rtnewt
   use spec, only: simpn
   use swc
   implicit none
@@ -20,65 +21,59 @@ module wasim
   real, allocatable :: p(:)
 
 contains
-  pure subroutine seep(n, t0, dt)
+
+  pure subroutine seep(n, t0, dt, z0)
     integer, intent(in) :: n
-    real, intent(in) :: t0
-    integer :: d, i, j
-    real :: dz, eps, k(n), psi(n), t(0:n), z(n), zd
-   
+    real, intent(in) :: t0, z0
+    integer :: d, i, j, jj
+    real :: dv, dz, eps, k(n), psi(n), t(0:n), z(n), zd
+
     eps = 1. / (2. * n)
     t = 0
     do j = 1, n
       t(j) = real(i) / n
       if(abs(t(j) - t0) < eps) i = j - 1
     end do
-    
+
     do concurrent(j = i:n-1)
       k(j) = simpn(k2, t(j), t(j+1))
       psi(j) = simpn(psi2, t(j), t(j+1))
     end do
-    
-    d = n
+
+    d = 0
+    dv = 1. / n
     z = zd
-  start:
-      do j = i+1, d
-        z(j) = (1. / (t(d) - t(i)) * (k(d) * psi(d) / z(j-1) + k(d))) * dt + z(j-1)
-        mm = mm - z(j) * k(d)
-        if(mm <= 0) then
-          d = j
-          exit
+    do while(v > 0)
+      do j = i, n
+        if(v <= 0) exit
+        if(d < j) d = j
+        if(d == i) then
+          c = 1. / (1. - t(i))
+        else
+          c = 1. / (t(d) .- t(i))
         end if
+        dz = c * (k(d) * psi(d) / z(j) + k(d))
+        z(j) = z(j) + dz * dt
       end do
     end do
-    
-    ! dz = 1. / (td - ti) * (K(td)*psi(td)/z(i) + K(td))
   end subroutine
 
-  pure function k(a, b)
-    real, intent(in) :: a, b
-    real :: k
+  pure function zd(k, psi, t, delta)
+    real, intent(in) :: k, psi, t, delta
+    real :: kt, pd, zd
 
-    k = simpn(qk, a, b) / (b - a)
+    kt = k * t
+    pd = abs(psi) * delta
+    call rtnewt(funcd, kt, zd)
+
   contains
-    pure function qk(t)
-      real, intent(in) :: t
-      real :: qk
+    pure subroutine funcd(x, fval, fderiv)
+      real, intent(in) :: x
+      real, intent(out) :: fval, fderiv
 
-      qk = swcrhc(t, p)
-    end function
-  end function
+      fval = x - pd * log(abs(1. + x / pd)) - kt
+      fderiv = x / (pd + x)
+    end subroutine
+  end subroutine
 
-  pure function psi(a, b)
-    real, intent(in) :: a, b
-    real :: psi
-
-    psi = simpn(qpsi, a, b) / (b - a)
-  contains
-    pure function qpsi(t)
-      real, intent(in) :: t
-      real :: qpsi
-
-      qpsi = swcms(t, p)
-    end function
-  end function
 end module

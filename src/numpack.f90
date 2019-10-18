@@ -265,7 +265,42 @@ contains
   end subroutine
 end module
 
-module interp1d
+module intgrt
+  implicit none
+  private
+  public simpn
+
+contains
+  pure function simpn(fcn, a, b, n) result(f)
+    interface
+      pure function fcn(x)
+        real, intent(in) :: x
+        real :: fcn
+      end function
+    end interface
+    real, intent(in) :: a, b
+    integer, intent(in), optional :: n
+    real :: f, f0, f1, f12, h, x0, x1
+    integer :: i, k
+
+    k = 3
+    if(present(n)) k = n
+    f = 0
+    h = (b - a) / k
+    x0 = a
+    f0 = fcn(x0)
+    do i = 1, k
+      x1 = x0 + h
+      f1 = fcn(x1)
+      f12 = fcn((x0 + x1) / 2.)
+      f = f + h / 6. * (f0 + 4. * f12 + f1)
+      x0 = x1
+      f0 = f1
+    end do
+  end function
+end module
+
+module intp1d
   implicit none
   private
   public interp
@@ -299,14 +334,14 @@ module rtfind
   integer, parameter :: MAXIT = 1000
 
 contains
-  pure subroutine rtnewt(funcd, x1, x2, x, tol, stat)
+  pure subroutine rtnewt(funcd, x0, x, tol, stat)
     interface
       pure subroutine funcd(x, fval, fderiv)
         real, intent(in) :: x
         real, intent(out) :: fval, fderiv
       end subroutine
     end interface
-    real, intent(in) :: x1, x2
+    real, intent(in) :: x0
     real, intent(out) :: x
     real, intent(in), optional :: tol
     integer, intent(out), optional :: stat
@@ -315,18 +350,14 @@ contains
 
     if(present(stat)) stat = 0
     xacc = merge(tol, sqrt(epsilon(1.)), present(tol))
-    x = .5 * (x1 + x2)
+    x = x0
     do j = 1, MAXIT
       call funcd(x, f, df)
       dx = f / df
       x = x - dx
-      if((x1 - x) * (x2 - x) < 0.) then
-        if(present(stat)) stat = -1
-        return
-      end if
       if(abs(dx) < xacc) return
     end do
-    if(present(stat)) stat = -2
+    if(present(stat)) stat = -1
   end subroutine
 
   pure subroutine zbrent(fcn, x1, x2, b, tol, stat)
@@ -414,11 +445,10 @@ contains
   end subroutine
 end module
 
-module spec
+module spcfnc
   implicit none
   private
   public hyp2f1
-  public simpn
 
 contains
   elemental function hyp2f1(a, b, c, z) result(f1)
@@ -440,34 +470,6 @@ contains
       aa = aa + 1.
       bb = bb + 1.
       cc = cc + 1.
-    end do
-  end function
-
-  pure function simpn(fcn, a, b, n) result(f)
-    interface
-      pure function fcn(x)
-        real, intent(in) :: x
-        real :: fcn
-      end function
-    end interface
-    real, intent(in) :: a, b
-    integer, intent(in), optional :: n
-    real :: f, f0, f1, f12, h, x0, x1
-    integer :: i, k
-
-    k = 3
-    if(present(n)) k = n
-    f = 0
-    h = (b - a) / k
-    x0 = a
-    f0 = fcn(x0)
-    do i = 1, k
-      x1 = x0 + h
-      f1 = fcn(x1)
-      f12 = fcn((x0 + x1) / 2.)
-      f = f + h / 6. * (f0 + 4. * f12 + f1)
-      x0 = x1
-      f0 = f1
     end do
   end function
 end module
