@@ -268,10 +268,10 @@ end module
 module intgrt
   implicit none
   private
-  public simpn
+  public nsimp
 
 contains
-  pure function simpn(fcn, a, b, n) result(f)
+  pure function nsimp(fcn, a, b, n) result(f)
     interface
       pure function fcn(x)
         real, intent(in) :: x
@@ -281,15 +281,15 @@ contains
     real, intent(in) :: a, b
     integer, intent(in), optional :: n
     real :: f, f0, f1, f12, h, x0, x1
-    integer :: i, k
+    integer :: i, nn
 
-    k = 3
-    if(present(n)) k = n
+    nn = 3
+    if(present(n)) nn = n
     f = 0
-    h = (b - a) / k
+    h = (b - a) / nn
     x0 = a
     f0 = fcn(x0)
-    do i = 1, k
+    do i = 1, nn
       x1 = x0 + h
       f1 = fcn(x1)
       f12 = fcn((x0 + x1) / 2.)

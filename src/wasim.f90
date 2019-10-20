@@ -11,60 +11,21 @@ contains
   end function
 end module
 
-module wasim
+module wa
+  use intgrt, only: nsimp
   use rtfind only: rtnewt
-  use spec, only: simpn
   use swc
   implicit none
   private
 
-  real, allocatable :: p(:)
-
 contains
-
-  pure subroutine seep(n, t0, dt, z0)
-    integer, intent(in) :: n
-    real, intent(in) :: t0, z0
-    integer :: d, i, j, jj
-    real :: dv, dz, eps, k(n), psi(n), t(0:n), z(n), zd
-
-    eps = 1. / (2. * n)
-    t = 0
-    do j = 1, n
-      t(j) = real(i) / n
-      if(abs(t(j) - t0) < eps) i = j - 1
-    end do
-
-    do concurrent(j = i:n-1)
-      k(j) = simpn(k2, t(j), t(j+1))
-      psi(j) = simpn(psi2, t(j), t(j+1))
-    end do
-
-    d = 0
-    dv = 1. / n
-    z = zd
-    do while(v > 0)
-      do j = i, n
-        if(v <= 0) exit
-        if(d < j) d = j
-        if(d == i) then
-          c = 1. / (1. - t(i))
-        else
-          c = 1. / (t(d) .- t(i))
-        end if
-        dz = c * (k(d) * psi(d) / z(j) + k(d))
-        z(j) = z(j) + dz * dt
-      end do
-    end do
-  end subroutine
-
-  pure function zd(k, psi, t, delta)
+  pure function ga(k, psi, t, delta)
     real, intent(in) :: k, psi, t, delta
-    real :: kt, pd, zd
+    real :: ga, kt, pd
 
     kt = k * t
     pd = abs(psi) * delta
-    call rtnewt(funcd, kt, zd)
+    call rtnewt(funcd, kt, ga)
 
   contains
     pure subroutine funcd(x, fval, fderiv)
@@ -76,4 +37,50 @@ contains
     end subroutine
   end subroutine
 
+  pure subroutine wasim(num, ts, ks, n, wap, wci, wcr, wcs)
+    integer, intent(in) :: num
+    real, intent(in) :: ts, ks, n, wap(:), wci, wcr, wcs
+    real, dimension(num) :: k, psi, z
+    real :: eps, t(0:num), theta
+    integer :: i, j, jj
+
+    eps = 1. / (2. * num)
+    i = num
+    t(0) = 0
+    theta = (wci - wcr) / (wcs - wcr)
+    z = ga(ks, psi_(1.), ts, n - wci)
+    do j = 1, num
+      jj = j - 1
+      t(j) = real(j) / num
+      if(abs(t(jj) - theta) < eps) i = jj
+    end do
+
+    do concurrent(j = i:num-1)
+      jj = j + 1
+      k(j) = nsimp(k_, t(j), t(jj))
+      psi(j) = nsimp(psi_, t(j), t(jj))
+    end do
+
+  contains
+    pure function k_(x)
+      real, intent(in) :: x
+      real :: k_
+
+      k_ = ks * swcrhs(x, wap)
+    end function
+
+    pure function psi_(x)
+      real, intent(in) :: x
+      real :: psi_
+
+      psi_ = swcms(x, wap)
+    end function
+
+    pure subroutine seep
+      integer, save :: d = num
+
+      dz = c * (k(d) * psi(d) / z(j) + k(d))
+      z(j) = z(j) + dz * ts
+    end subroutine
+  end subroutine
 end module
