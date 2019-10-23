@@ -14,7 +14,6 @@ module scx
   public scxtop
 
   type stra_t
-    real h
     real w
     real phi
     real c
@@ -24,13 +23,14 @@ module scx
     real a
     real n
     real k
-    real ocp(2)
+    integer debris
+    real ocrp(2)
   contains
     procedure :: bot => stra_t_bot
   end type
 
   type(stra_t), allocatable :: strata
-  real, allocatable :: net(:, :), xr(:), yr(:)
+  real, allocatable :: net(:, :), ridge(:, :)
   real :: scxdim(2), tana
 
 contains
@@ -42,12 +42,12 @@ contains
     y = scxtop(x)
     i = 1
     do while(strata(i)%c == 0)
-      i = i + 1
       y = strata(i)%bot(x)
+      i = i + 1
     end do
     associate(c => strata(i)%c, w => strata(i)%w,&
               phi => strata(i)%phi)
-      y = y - 2. * c / w * tan(atan(1.) +.4 * phi)
+      y = y - 2. * c / w * tan(atan(1.) + .4 * phi)
     end associate
   end function
 
@@ -123,14 +123,18 @@ contains
     real, intent(in) :: x
     real :: y
 
-    y = interp(x, xr, yr)
+    y = interp(x, ridge(1, :), ridge(2, :))
   end function
 
-  pure function stra_t_bot(st, x) result(y)
-    class(stra_t), intent(in) :: st
+  elemental function stra_t_bot(self, x) result(y)
+    class(stra_t), intent(in) :: self
     real, intent(in) :: x
     real :: y
 
-    y = st%ocp(2) + tana * (x - st%ocp(1))
+    if(self%debris > 0) then
+      y = interp(x, ridge(1, :), ridge(2+self%debris, :))
+    else
+      y = self%ocrp(2) + tana * (x - self%ocrp(1))
+    end if
   end function
 end module

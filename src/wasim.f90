@@ -38,13 +38,14 @@ contains
   end subroutine
 
   pure subroutine wasim(ep, ts, wap, ks, n, wci, wcr, wcs, h, z)
-    integer, intent(in) :: num
-    real, intent(in) :: ep(:, :), ts, wap(:), ks, n, wci, wcr, wcs, h
+    real, intent(in) :: ep(:, :), ts, wpa(:, :)
+    real, intent(in), dimension(:) :: ks, n, wci, wcr, wcs, h
     real, intent(out) :: z(:)
     real, dimension(size(z)) :: k, psi
     real :: eps, t(0:size(z)), theta, v, zd
-    integer :: i, ii, j, jj, num
+    integer :: i, ii, j, jj, m, num
 
+    m = size(h)
     num = size(z)
     eps = 1. / (2. * num)
     i = num
@@ -57,7 +58,7 @@ contains
     end do
 
     z(:i) = h
-    v = sum(ep(1, :))
+    v = ep(1, 1)
     zd = ga(ks, psi_(theta), ts, n - wci)
     where (z == 0) z = zd
     v = v - zd
