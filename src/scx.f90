@@ -11,20 +11,21 @@ module scx
   public scxdel
   public scxmat
   public scxnew
+  public scxpwp
   public scxtop
 
   type stra_t
     real w
     real phi
     real c
-    real theta
-    real res
-    real sat
-    real a
     real n
+    real i
+    real r
+    real p(2)
     real k
-    integer debris
-    real ocrp(2)
+    real x
+    real y
+    integer d
   contains
     procedure :: bot => stra_t_bot
   end type
@@ -81,7 +82,8 @@ contains
 
       alpha(i) = asin((q(2) - r(2)) / b(i))
       m = .5 * (q + r)
-      call scxmat(m(1), m(2), c(i), phi(i), w(i), u(i))
+      u(i) = scxpwp(m(1), m(2))
+      call scxmat(m(1), m(2), c(i), phi(i), w(i))
 
       q = r
     end do
@@ -90,27 +92,25 @@ contains
   subroutine scxdel
   end subroutine
 
-  pure subroutine scxmat(x, y, c, phi, w, u)
+  pure subroutine scxmat(x, y, c, phi, w)
     real, intent(in) :: x, y
-    real, intent(out) :: c, phi, w, u
-    real :: ua, uw
+    real, intent(out) :: c, phi, w
+    real :: h0, h1, l
+    integer :: i, n
 
-    c = 0
-    phi = 0
+    n = size(strata)
+    h0 = scxtop(x)
+    l = h0 - y
+    i = 0
     w = 0
-    u = 0
-    ! w = sum(w(:i))
-    ! t = min(max((theta - res) / (sat - res), 0.), 1.)
-    ! ua = barom(y)
-    ! uw = 0
-    ! if(t == 1.) then
-    !   y0 = scxtop(l) + piezom(x, h, l)
-    !   uw = -max(hsp(y0 - y), 0)
-    !   ua = 0
-    ! else if(t > 0) then
-    !   uw = t * vgms(t, a, n)
-    ! end if
-    ! u = ua - uw
+    do while(y < h0 .and. i <= n)
+      i = i + 1
+      h1 = strata(i)%bot(x)
+      w = w + (h0 - max(h1, y)) / l * strata(i)%w
+      h0 = h1
+    end do
+    c = strata(i)%c
+    phi = strata(i)%phi
   end subroutine
 
   subroutine scxnew(name)
@@ -118,6 +118,11 @@ contains
 
     scxdim = (/ xs(size(xs)) - xs(1), maxval(ys) - minval(ys) /)
   end subroutine
+
+  pure function scxpwp(x, y) result(u)
+    real, intent(in) :: x, y
+    real :: u
+  end function
 
   elemental function scxtop(x) result(y)
     real, intent(in) :: x
@@ -131,10 +136,10 @@ contains
     real, intent(in) :: x
     real :: y
 
-    if(self%debris > 0) then
-      y = interp(x, ridge(1, :), ridge(2+self%debris, :))
+    if(self%d > 0) then
+      y = interp(x, ridge(1, :), ridge(2+self%d, :))
     else
-      y = self%ocrp(2) + tana * (x - self%ocrp(1))
+      y = self%y + tana * (x - self%x)
     end if
   end function
 end module
