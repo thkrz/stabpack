@@ -37,28 +37,39 @@ contains
     end subroutine
   end subroutine
 
-  pure subroutine wasim(num, ts, ks, n, wap, wci, wcr, wcs)
+  pure subroutine wasim(ep, ts, wap, ks, n, wci, wcr, wcs, h, z)
     integer, intent(in) :: num
-    real, intent(in) :: ts, ks, n, wap(:), wci, wcr, wcs
-    real, dimension(num) :: k, psi, z
-    real :: eps, t(0:num), theta
-    integer :: i, j, jj
+    real, intent(in) :: ep(:, :), ts, wap(:), ks, n, wci, wcr, wcs, h
+    real, intent(out) :: z(:)
+    real, dimension(size(z)) :: k, psi
+    real :: eps, t(0:size(z)), theta, v, zd
+    integer :: i, ii, j, jj, num
 
+    num = size(z)
     eps = 1. / (2. * num)
     i = num
     t(0) = 0
     theta = (wci - wcr) / (wcs - wcr)
-    z = ga(ks, psi_(1.), ts, n - wci)
     do j = 1, num
       jj = j - 1
       t(j) = real(j) / num
       if(abs(t(jj) - theta) < eps) i = jj
     end do
 
+    z(:i) = h
+    v = sum(ep(1, :))
+    zd = ga(ks, psi_(theta), ts, n - wci)
+    where (z == 0) z = zd
+    v = v - zd
+
     do concurrent(j = i:num-1)
       jj = j + 1
       k(j) = nsimp(k_, t(j), t(jj))
       psi(j) = nsimp(psi_, t(j), t(jj))
+    end do
+
+    do j = 1, size(ep, 2)
+      if(ep(1, j) > 0) call seep
     end do
 
   contains

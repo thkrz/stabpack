@@ -13,15 +13,8 @@ module scx
   public scxnew
   public scxtop
 
-  type aqua_t
-    real h
-    real l
-    real y
-  end type
-
   type stra_t
-    real x
-    real y
+    real h
     real w
     real phi
     real c
@@ -31,19 +24,31 @@ module scx
     real a
     real n
     real k
+    real ocp(2)
+  contains
+    procedure :: bot => stra_t_bot
   end type
 
-  real, allocatable :: xs(:), ys(:)
+  type(stra_t), allocatable :: strata
+  real, allocatable :: net(:, :), xr(:), yr(:)
   real :: scxdim(2), tana
 
 contains
   elemental function scxcrk(x) result(y)
     real, intent(in) :: x
     real :: y
+    integer :: i
 
-    y = 0
-    ! y = yoc + tana * (x - xoc)
-    ! z = 2. * c / w * tan(atan(1.) + .4 * phi)
+    y = scxtop(x)
+    i = 1
+    do while(strata(i)%c == 0)
+      i = i + 1
+      y = strata(i)%bot(x)
+    end do
+    associate(c => strata(i)%c, w => strata(i)%w,&
+              phi => strata(i)%phi)
+      y = y - 2. * c / w * tan(atan(1.) +.4 * phi)
+    end associate
   end function
 
   pure subroutine scxcut(n, rd, p, w, c, phi, u, alpha, b, h, stat)
@@ -118,6 +123,14 @@ contains
     real, intent(in) :: x
     real :: y
 
-    y = interp(x, xs, ys)
+    y = interp(x, xr, yr)
+  end function
+
+  pure function stra_t_bot(st, x) result(y)
+    class(stra_t), intent(in) :: st
+    real, intent(in) :: x
+    real :: y
+
+    y = st%ocp(2) + tana * (x - st%ocp(1))
   end function
 end module
