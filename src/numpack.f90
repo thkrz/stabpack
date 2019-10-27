@@ -1,21 +1,22 @@
 module bez
   implicit none
   private
-  public beza
-  public bezc
+  public bezarc
+  public bezcrv
   public bezfit
-  public bezl
+  public bezlin
 
 contains
-  pure function beza(n, a, b) result(p)
+  pure subroutine bezarc(a, b, p)
     real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.), &
                        pi = 4. * atan(1.)
-    integer, intent(in) :: n
     real, intent(in) :: a(:), b(:)
-    integer :: i, m
-    real :: br(2), dx(2), p(n, 2)
+    real, intent(out) :: p(:, :)
+    integer :: i, m, n
+    real :: br(2), dx(2)
     real :: beta, cosb, sinb, r, rot(2, 2)
 
+    n = size(p, 2)
     if (mod(n, 2) /= 0) error stop
 
     m = n / 2
@@ -33,25 +34,25 @@ contains
     sinb = cosb
     r = abs(a(2) - br(2)) / (2. * sinb)
     do i = 1, m - 1
-      p(i, :) = a
+      p(:, i) = a
     end do
     dx =  k * r * (/ sinb, cosb /)
     rot = inv(rot)
-    p(m, :) = matmul(rot, dx) + a
-    p(m + 1, :) = matmul(rot, br + dx - a) + a
+    p(:, m) = matmul(rot, dx) + a
+    p(:, m + 1) = matmul(rot, br + dx - a) + a
     do i = m + 2, n
-      p(i, :) = b
+      p(:, i) = b
     end do
-  end function
+  end subroutine
 
-  pure function bezc(t, p) result(c)
+  pure function bezcrv(t, p) result(c)
     real, intent(in) :: t, p(:, :)
     real :: c(size(p, 1))
     integer :: i, n
 
     c = 0
     if(t < 0 .or. t > 1) error stop
-    n = size(p, 1) - 1
+    n = size(p, 2) - 1
     do i = 0, n
       c = c + b(t, i, n) * p(:, i+1)
     end do
@@ -87,12 +88,12 @@ contains
     real, dimension(2) :: c1, c2, c12
     integer :: i, k, n
 
-    n = size(x, 1)
+    n = size(x, 2)
     if (n < 3) error stop
     k = n - 1
-    allocate(p(4, 2))
-    p(1, :) = x(1, :)
-    p(4, :) = x(n, :)
+    allocate(p(2, 4))
+    p(:, 1) = x(:, 1)
+    p(:, 4) = x(:, n)
 
     a1 = 0
     a2 = 0
@@ -105,7 +106,7 @@ contains
       a1 = a1 + t**2 * t1**4
       a2 = a2 + t**4 * t1**2
       a12 = a12 + t**3 * t1**3
-      c12 = x(i + 1, :) - t1**3 * p(1, :) - t**3 * p(4, :)
+      c12 = x(:, i + 1) - t1**3 * p(1, :) - t**3 * p(:, 4)
       c1 = c1 + 3. * t * t1**2 * c12
       c2 = c2 + 3. * t**2 * t1 * c12
     end do
@@ -113,43 +114,43 @@ contains
     a2 = 9. * a2
     a12 = 9. * a12
     d = (a1 * a2 - a12 * a12)
-    p(2, :) = (a2 * c1 - a12 * c2) / d
-    p(3, :) = (a1 * c2 - a12 * c1) / d
+    p(:, 2) = (a2 * c1 - a12 * c2) / d
+    p(:, 3) = (a1 * c2 - a12 * c1) / d
 
     do concurrent(i = 0:k)
       t = real(i) / k
-      a(i + 1) = norm2(x(i + 1, :) - bezc(t, p))
+      a(i + 1) = norm2(x(:, i + 1) - bezcrv(t, p))
     end do
     if (all(a < tol)) return
 
     k = maxloc(a, 1)
     if (k < 3 .or. n - k < 2) return
 
-    q = bezfit(x(:k, :), tol)
-    r = bezfit(x(k:, :), tol)
+    q = bezfit(x(:, :k), tol)
+    r = bezfit(x(:, k:), tol)
     n = size(q, 1)
     k = size(r, 1)
     deallocate(p)
     allocate(p(n + k - 1, 2))
-    p(:n, :) = q
-    p(n:, :) = r
+    p(:, :n) = q
+    p(:, n:) = r
     deallocate(q)
     deallocate(r)
   end function
 
-  pure function bezl(n, a, b) result(p)
-    integer, intent(in) :: n
+  pure subroutine bezlin(a, b, p)
     real, intent(in) :: a(:), b(:)
-    real :: dx(size(a)), p(n, size(a))
-    integer :: i, j, m
+    real, intent(out) :: p(:, :)
+    real :: dx(size(a))
+    integer :: i, j, n
 
     dx = b - a
-    m = n - 1
-    do i = 0, m
+    n = size(p, 2) - 1
+    do i = 0, n
       j = i + 1
-      p(j, :) = dx * real(i) / m + a
+      p(:, j) = dx * real(i) / n + a
     end do
-  end function
+  end subroutine
 
   pure function inv(a) result(b)
     real, intent(in) :: a(2, 2)
