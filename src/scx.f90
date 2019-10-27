@@ -1,18 +1,18 @@
 module scx
   use bez, only: bezc
-  use interp1d, only: interp
-  use pwp, only: barom, hystp
-  use swc, only: swcms
+  use intp1d, only: interp
+  use mesh, only: mesh_t
   implicit none
   private
   protected scxdim
+  protected scxp_m
   public scxcrk
   public scxcut
   public scxdel
+  public scxini
   public scxmat
-  public scxnew
-  public scxpwp
   public scxtop
+  public scxwas
 
   type stra_t
     real w
@@ -30,8 +30,9 @@ module scx
     procedure :: bot => stra_t_bot
   end type
 
+  type(mesh_t) :: scxf_m, scxp_m
   type(stra_t), allocatable :: strata
-  real, allocatable :: net(:, :), ridge(:, :)
+  real, allocatable :: ridge(:, :)
   real :: scxdim(2), tana
 
 contains
@@ -82,7 +83,7 @@ contains
 
       alpha(i) = asin((q(2) - r(2)) / b(i))
       m = .5 * (q + r)
-      u(i) = scxpwp(m(1), m(2))
+      u(i) = scxp_m%get(m(1), m(2))
       call scxmat(m(1), m(2), c(i), phi(i), w(i))
 
       q = r
@@ -90,6 +91,15 @@ contains
   end subroutine
 
   subroutine scxdel
+  end subroutine
+
+  subroutine scxini(name)
+    character(*), intent(in) :: name
+    integer :: n
+
+    n = size(ridge, 2)
+    scxdim = (/ ridge(1, n) - ridge(1, 1), &
+                maxval(ridge(2, :)) - minval(ridge(2, :)) /)
   end subroutine
 
   pure subroutine scxmat(x, y, c, phi, w)
@@ -103,7 +113,7 @@ contains
     l = h0 - y
     i = 0
     w = 0
-    do while(y < h0 .and. i <= n)
+    do while(y < h0 .and. i < n)
       i = i + 1
       h1 = strata(i)%bot(x)
       w = w + (h0 - max(h1, y)) / l * strata(i)%w
@@ -112,17 +122,6 @@ contains
     c = strata(i)%c
     phi = strata(i)%phi
   end subroutine
-
-  subroutine scxnew(name)
-    character(*), intent(in) :: name
-
-    scxdim = (/ xs(size(xs)) - xs(1), maxval(ys) - minval(ys) /)
-  end subroutine
-
-  pure function scxpwp(x, y) result(u)
-    real, intent(in) :: x, y
-    real :: u
-  end function
 
   elemental function scxtop(x) result(y)
     real, intent(in) :: x

@@ -11,21 +11,23 @@ contains
   end function
 end module
 
-module wa
+module wasim
   use intgrt, only: nsimp
   use rtfind only: rtnewt
   use swc
   implicit none
   private
+  public wasga
+  public wasini
 
 contains
-  pure function ga(k, psi, t, delta)
-    real, intent(in) :: k, psi, t, delta
-    real :: ga, kt, pd
+  pure function wasga(k, psi, time, delta) result(f)
+    real, intent(in) :: k, psi, time, delta
+    real :: f, kt, pd
 
-    kt = k * t
+    kt = k * time
     pd = abs(psi) * delta
-    call rtnewt(funcd, kt, ga)
+    call rtnewt(funcd, kt, f)
 
   contains
     pure subroutine funcd(x, fval, fderiv)
@@ -37,7 +39,10 @@ contains
     end subroutine
   end subroutine
 
-  pure subroutine wasim(ep, ts, wap, ks, n, wci, wcr, wcs, h, z)
+  subroutine wasini(name, dt, x, y)
+  end subroutine
+
+  pure subroutine wasim(ep, ts, wap, ks, n, i0, r, h, z)
     real, intent(in) :: ep(:, :), ts, wpa(:, :)
     real, intent(in), dimension(:) :: ks, n, wci, wcr, wcs, h
     real, intent(out) :: z(:)
