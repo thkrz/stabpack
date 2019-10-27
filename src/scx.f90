@@ -33,7 +33,7 @@ module scx
   end type
 
   type(mesh_t) :: scxp_m
-  type(stra_t), allocatable :: strata
+  type(stra_t), allocatable :: strata(:)
   real, allocatable, dimension(:, :) :: ridge, scxcrk
   real :: scxdim(2, 2), tana
 
@@ -132,6 +132,7 @@ contains
     allocate(scxcrk(2, m))
     read(id, *, iostat=err, iomsg=msg) (scxcrk(:, i), i=1,m)
     if(stat /= 0) call fatal(msg)
+    close(id)
 
     m = size(ridge, 2)
     scxdim(1, 1) = ridge(1, 1)
