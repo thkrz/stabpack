@@ -5,6 +5,7 @@ module bez
   public bezcrv
   public bezfit
   public bezlin
+  public bezsim
 
 contains
   pure subroutine bezarc(a, b, p)
@@ -163,6 +164,20 @@ contains
     b(2, 1) = -detinv * a(2, 1)
     b(1, 2) = -detinv * a(1, 2)
     b(2, 2) = +detinv * a(1, 1)
+  end function
+
+  pure function bezsim(p, q) result(lambda)
+    real, intent(in), dimension(:, :) :: p, q
+    real :: lambda
+    integer :: n
+
+    n = size(p, 2)
+    if(n /= size(q, 2)) error stop
+    lambda = 0
+    do i = 1, n
+      lambda = lambda + norm2(p(:, i) - q(:, i))
+    end do
+    lambda = lambda / n
   end function
 end module
 

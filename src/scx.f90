@@ -1,14 +1,12 @@
 module scx
   use bez, only: bezcrv
   use intp1d, only: interp
-  use mesh, only: mesh_t
   use ssat_env
   implicit none
   private
   protected scxcrk
   protected scxdim
   protected scxnum
-  protected scxp_m
   public scxcut
   public scxdel
   public scxini
@@ -32,7 +30,6 @@ module scx
     procedure :: bot => stra_t_bot
   end type
 
-  type(mesh_t) :: scxp_m
   type(stra_t), allocatable :: strata
   real, allocatable, dimension(:, :) :: ridge, scxcrk
   real :: scxdim(2, 2), tana
@@ -85,7 +82,7 @@ contains
 
       alpha(i) = asin((q(2) - r(2)) / b(i))
       m = .5 * (q + r)
-      u(i) = scxp_m%get(m(1), m(2))
+      u(i) = 0
       call scxmat(m(1), m(2), c(i), phi(i), w(i))
 
       q = r
