@@ -91,7 +91,7 @@ contains
         mos = maxmu
         return
       end if
-      call razdslv(num, w, c, phi, u, alpha, b, h, fos, e, t, mu, p0)
+      call razslv(num, w, c, phi, u, alpha, b, h, fos, e, t, mu, p0)
       mos = mu
     end function
   end subroutine
