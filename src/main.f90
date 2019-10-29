@@ -1,6 +1,7 @@
 program main
   use bez, only: bezarc, bezlin
   use fmin, only: amoeba
+  use pwp, only: hystp
   use razdol, only: razslv
   use ssat_env, only: fatal
   use scx
@@ -12,43 +13,45 @@ program main
     type(res_t), pointer :: next => null()
   end type
 
-  character(len=255) :: arg, datafile, msg, precipitation
+  character(len=255) :: arg, datafile, msg, precfile
   character(len=4) :: mode = 'stab'
-  integer :: bezn = 3, i, id, m, n, num = 100, stat
-  real :: a(2), b(2), dx = 5., fos = 1.3, p0, rd = 0.3, xlim(2) = (/ -huge(1.), huge(1.) /)
+  integer :: bezn = 3, err, i, id, m, n, num = 100
+  real :: a(2), b(2), bound, dx = 5., fos = 1.3, p0, rd = 0.3, xlim(2) = 0
   type(res_t) :: result
 
-  namelist /CONFIG/ bezn, datafile, dx, fos, mode, num, precipitation, rd, xlim(2)
+  namelist /CONFIG/ bezn, datafile, dx, fos, mode, num, precfile, rd, xlim(2)
 
   if(command_argument_count() /= 1) call fatal('control file missing.')
   call get_command_argument(1, arg)
-  open(newunit=id, file=trim(arg), status='old', iostat=stat, iomsg=msg, action='read')
-  if(stat /= 0) call fatal(msg)
-  read(id, nml=CONFIG, iostat=stat, iomsg=msg)
-  if(stat /= 0) call fatal(msg)
+  open(newunit=id, file=trim(arg), status='old', iostat=err, iomsg=msg, action='read')
+  if(err /= 0) call fatal(msg)
+  read(id, nml=CONFIG, iostat=err, iomsg=msg)
+  if(err /= 0) call fatal(msg)
   close(id)
 
-  call scxini(datafile)
+  call scxini(datafile, xlim)
+  bound = sum(scxcrk(:, 1))
   m = size(scxcrk, 2)
-  n = ceiling(scxdim(2, 1) / dx)
-  !$omp parallel do private(i, j, a, b, p0)
+  !$omp parallel do private(i, a, b, p0)
   do i = 1, m
     a = scxcrk(:, i)
     p0 = hystp(scxtop(a(1)) - a(2))
-    b(1) = a(1)
-    do j = i+1, n
-      b(1) = b(1) + dx
+    b(1) = a(1) + dx
+    do while(b(1) < bound)
       b(2) = scxtop(b(1))
       call stab(a, b, p0)
+      b(1) = b(1) + dx
     end do
   end do
+
+  n = ceiling(scxdim(2, 1) / dx)
   !$omp parallel do private(i, j, a, b)
   do i = 0, n-1
-    a(1) = i * dx
+    a(1) = scxdim(1, 1) + i * dx
     a(2) = scxtop(a(1))
     do j = i+1, n
-      b(1) = j * dx
-      b(2) = scxtop(b(2))
+      b(1) = scxdim(1, 1) + j * dx
+      b(2) = scxtop(b(1))
       call stab(a, b, 0.)
     end do
   end do
@@ -57,9 +60,11 @@ program main
 
 contains
   subroutine stab(a, b, p0)
+    real, parameter :: maxmu = huge(1.)
     real, intent(in) :: a(2), b(2), p0
-    real :: h(0:num), p(2, bezn + 1)
     real, dimension(num) :: w, c, phi, u, alpha, b
+    real, dimension(0:num) :: e, h, t
+    real :: p(2, bezn + 1)
     integer :: err
 
     call bezarc(a, b, p)
@@ -73,24 +78,17 @@ contains
 
       popt = pack(p(:, 2:bezn), .true.)
       call amoeba(mos, popt, fn=mu, stat=err)
-      if(err == 0 .and. mu < 1) then
-        p(:, 2:bezn) = reshape(popt, (/ 2, bezn - 1 /))
-        call resadd(mu, p)
-      end if
+      if(err == 0 .and. mu < 1) call resadd(mu, p)
     end subroutine
 
-    pure function mos(x)
+    function mos(x)
       real, intent(in) :: x(:)
-      real :: pn(2, bezn + 1)
-      real, dimension(0:num) :: e, t
-      inetger :: err
+      integer :: err
 
-      pn(:, 1) = p(:, 1)
-      pn(:, 2:bezn) = reshape(x, (/ 2, bezn - 1 /))
-      pn(:, bezn + 1) = p(:, bezn + 1)
-      scxcut(num, rd, pn, w, c, phi, u, alpha, b, h, err)
+      p(:, 2:bezn) = reshape(x, (/ 2, bezn - 1 /))
+      scxcut(num, rd, p, w, c, phi, u, alpha, b, h, err)
       if(err /= 0) then
-        mos = 10.
+        mos = maxmu
         return
       end if
       call razdslv(num, w, c, phi, u, alpha, b, h, fos, e, t, mu, p0)

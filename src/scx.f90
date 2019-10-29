@@ -97,8 +97,9 @@ contains
     scxnum = 0
   end subroutine
 
-  subroutine scxini(name)
+  subroutine scxini(name, xlim)
     character(*), intent(in) :: name
+    real, intent(in) :: xlim(2)
     character(len=255) :: msg
     real :: alpha, h
     integer :: err, id, i, m, n

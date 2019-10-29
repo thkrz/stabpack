@@ -187,9 +187,9 @@ module fmin
   public amoeba
 
 contains
-  pure subroutine amoeba(fcn, x, tol, fn, stat)
+  subroutine amoeba(fcn, x, tol, fn, stat)
     interface
-      pure function fcn(x)
+      function fcn(x)
         real, intent(in) :: x(:)
         real :: fcn
       end function
