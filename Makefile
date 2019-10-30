@@ -1,19 +1,22 @@
 include config.mk
 
-OBJ = src/mospack.o src/numpack.o src/wapack.o \
-      src/ssat_env.o src/scx.o src/wasim.o \
-      src/main.o
+PACK = src/bempack.o src/mospack.o src/numpack.o \
+	src/statpack.o src/wapack.o
 
 %.o: %.f90
 	@echo FC $<
 	@${FC} -o $@ -c ${FFLAGS} $<
 
-all: ssat
+all: seep stab
 
 lbfgsb:
 	@${MAKE} -C src/$@
 
-ssat: ${OBJ}
+seep: ${PACK} src/ssat_env.o src/scx.o src/seep.o
+	@echo LD $@
+	@${FC} -o $@ $^ ${LDFLAGS}
+
+stab: ${PACK} src/ssat_env.o src/scx.o src/stab.o
 	@echo LD $@
 	@${FC} -o $@ $^ ${LDFLAGS}
 

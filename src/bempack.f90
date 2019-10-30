@@ -36,7 +36,7 @@ contains
     i = floor(dim(x - self%x) / self%dx)
     j = n - floor(dim(y - self%y) / self%dy)
     if(i > m .or. j < 0) then
-      v = 0
+      v = self%nan
     else
       v = self%map(j, i)
     end if

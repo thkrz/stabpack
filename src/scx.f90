@@ -101,13 +101,14 @@ contains
   end subroutine
 
   subroutine scxini(name, xlim, grid)
-    character(*), intent(in) :: name, grid
+    character(*), intent(in) :: name
     real, intent(in) :: xlim(2)
+    character(*), intent(in), optional :: grid
     character(len=255) :: msg
     real :: alpha, h
     integer :: err, id, i, m, n
 
-    pwpini = len_trim(grid) > 0
+    pwpini = present(grid) .and. len_trim(grid) > 0
     if(pwpini) pwp%load(grid)
 
     open(newunit=id, file=name, status='old', iostat=err, iomsg=msg)
