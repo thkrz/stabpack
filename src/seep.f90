@@ -1,2 +1,2 @@
-program seep
+program main
 end program
