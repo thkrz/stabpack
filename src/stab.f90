@@ -13,13 +13,13 @@ program main
     type(res_t), pointer :: next => null()
   end type
 
-  character(len=255) :: arg, datafile, msg, precfile
+  character(len=255) :: arg, datafile, msg, pwpgrid
   character(len=4) :: mode = 'stab'
   integer :: bezn = 3, err, i, id, m, n, num = 100
   real :: a(2), b(2), bound, dx = 5., fos = 1.3, p0, rd = 0.3, xlim(2) = 0
   type(res_t) :: result
 
-  namelist /CONFIG/ bezn, datafile, dx, fos, mode, num, precfile, rd, xlim(2)
+  namelist /CONFIG/ bezn, datafile, dx, fos, mode, num, pwpgrid, rd, xlim(2)
 
   if(command_argument_count() /= 1) call fatal('control file missing.')
   call get_command_argument(1, arg)
@@ -29,7 +29,7 @@ program main
   if(err /= 0) call fatal(msg)
   close(id)
 
-  call scxini(datafile, xlim)
+  call scxini(datafile, xlim, pwpgrid)
   bound = sum(scxcrk(:, 1))
   m = size(scxcrk, 2)
   !$omp parallel do private(i, a, b, p0)

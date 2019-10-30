@@ -1,6 +1,7 @@
 module scx
   use bez, only: bezcrv
   use intp1d, only: interp
+  use mesh, only: mesh_t
   use ssat_env
   implicit none
   private
@@ -30,6 +31,8 @@ module scx
     procedure :: bot => stra_t_bot
   end type
 
+  logical :: pwpini
+  type(mesh_t) :: pwp
   type(stra_t), allocatable :: strata(:)
   real, allocatable, dimension(:, :) :: ridge, scxcrk
   real :: scxdim(2, 2), tana
@@ -82,7 +85,7 @@ contains
 
       alpha(i) = asin((q(2) - r(2)) / b(i))
       m = .5 * (q + r)
-      u(i) = 0
+      u(i) = merge(pwp%get(m(1), m(2)), 0., pwpini)
       call scxmat(m(1), m(2), c(i), phi(i), w(i))
 
       q = r
@@ -97,12 +100,15 @@ contains
     scxnum = 0
   end subroutine
 
-  subroutine scxini(name, xlim)
-    character(*), intent(in) :: name
+  subroutine scxini(name, xlim, grid)
+    character(*), intent(in) :: name, grid
     real, intent(in) :: xlim(2)
     character(len=255) :: msg
     real :: alpha, h
     integer :: err, id, i, m, n
+
+    pwpini = len_trim(grid) > 0
+    if(pwpini) pwp%load(grid)
 
     open(newunit=id, file=name, status='old', iostat=err, iomsg=msg)
     if(stat /= 0) call fatal(msg)
