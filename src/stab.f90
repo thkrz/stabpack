@@ -13,29 +13,52 @@ program main
     type(res_t), pointer :: next => null()
   end type
 
-  character(len=255) :: arg, datafile, msg, pwpgrid
-  character(len=4) :: mode = 'stab'
-  integer :: bezn = 3, err, i, id, m, n, num = 100
-  real :: a(2), b(2), bound, dx = 5., fos = 1.3, p0, rd = 0.3, xlim(2) = 0
+  character(len=255) :: arg, datafile
+  integer :: bezn, i, id, m, n, num
+  real :: a(2), b(2), bound, dx, fos, p0, rd, xlim(2)
   type(res_t) :: result
 
-  namelist /CONFIG/ bezn, datafile, dx, fos, mode, num, pwpgrid, rd, xlim(2)
+  bezn = 3
+  dx = 5.
+  fos = 1.3
+  rd = .3
+  xlim = 0
+  do i = 1, get_argument_count()
+    call get_command_argument(i, arg)
+    if(arg(:1) == '-') then
+      select case(arg(2:2))
+      case('d')
+        read(arg(3:), *) dx
+      case('f')
+        read(arg(3:), *) fos
+      case('n')
+        if(arg(3:3) == 'B') then
+          read(arg(4:), *) bezn
+        else
+          read(arg(3:), *) num
+        end if
+      case('r')
+        read(arg(3:), *) rd
+      case('x')
+        if(arg(3:3) == '0') then
+          read(arg(4:), *) xlim(1)
+        else if(arg(3:3) == '1') then
+          read(arg(4:), *) xlim(2)
+        end if
+      end select
+    else
+      datafile = arg
+    end if
+  end do
+  if(len_trim(datafile) == 0) call fatal('file missing.')
 
-  if(command_argument_count() /= 1) call fatal('control file missing.')
-  call get_command_argument(1, arg)
-  open(newunit=id, file=trim(arg), status='old', iostat=err, iomsg=msg, action='read')
-  if(err /= 0) call fatal(msg)
-  read(id, nml=CONFIG, iostat=err, iomsg=msg)
-  if(err /= 0) call fatal(msg)
-  close(id)
-
-  call scxini(datafile, xlim, pwpgrid)
+  call scxini(datafile, xlim)
   bound = sum(scxcrk(:, 1))
   m = size(scxcrk, 2)
   !$omp parallel do private(i, a, b, p0)
   do i = 1, m
-    a = scxcrk(:, i)
-    p0 = hystp(scxtop(a(1)) - a(2))
+    a = scxcrk(:2, i)
+    p0 = scxcrk(3, i)
     b(1) = a(1) + dx
     do while(b(1) < bound)
       b(2) = scxtop(b(1))

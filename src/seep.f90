@@ -4,19 +4,35 @@ program main
   use scx
   implicit none
 
-  character(len=255) :: arg, datafile, msg, precfile
-  integer :: bins = 100, err, id
-  real :: step = 1., xlim(2) = 0
+  character(len=255) :: arg, datafile, precfile
+  integer :: bins, i, id
+  real :: dt, xlim(2)
 
-  namelist /CONFIG/ bins, datafile, precfile, step, xlim
-
-  if(command_argument_count() /= 1) call fatal('control file missing.')
-  call get_command_argument(1, arg)
-  open(newunit=id, file=trim(arg), status='old', iostat=err, iomsg=msg, action='read')
-  if(err /= 0) call fatal(msg)
-  read(id, nml=CONFIG, iostat=err, iomsg=msg)
-  if(err /= 0) call fatal(msg)
-  close(id)
+  bins = 100
+  d = 1.
+  xlim = 0
+  do i = 1, get_argument_count()
+    call get_command_argument(i, arg)
+    if(arg(:1) == '-') then
+      select case(arg(2:2))
+      case('b')
+        read(arg(3:), *) bins
+      case('d')
+        read(arg(3:), *) dt
+      case('p')
+        precfile = arg(3:)
+      case('x')
+        if(arg(3:3) == '0') then
+          read(arg(4:), *) xlim(1)
+        else if(arg(3:3) == '1') then
+          read(arg(4:), *) xlim(2)
+        end if
+      end select
+    else
+      datafile = arg
+    end if
+  end do
+  if(len_trim(datafile) == 0) call fatal('file missing.')
 
   call scxini(datafile, xlim)
   call scxdel
