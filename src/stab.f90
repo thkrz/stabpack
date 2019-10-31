@@ -1,7 +1,6 @@
 program main
   use bez, only: bezarc, bezlin
   use fmin, only: amoeba
-  use pwp, only: hystp
   use razdol, only: razslv
   use ssat_env, only: fatal
   use scx
@@ -53,7 +52,7 @@ program main
   if(len_trim(datafile) == 0) call fatal('file missing.')
 
   call scxini(datafile, xlim)
-  bound = sum(scxcrk(:, 1))
+  bound = sum(scxdim(:, 1))
   m = size(scxcrk, 2)
   !$omp parallel do private(i, a, b, p0)
   do i = 1, m
