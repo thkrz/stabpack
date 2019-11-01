@@ -16,7 +16,7 @@ contains
     character(*), intent(in) :: s
 
     write(error_unit, *) trim(s)
-    error stop
+    stop
   end subroutine
 
   elemental function radians(deg) result(rad)

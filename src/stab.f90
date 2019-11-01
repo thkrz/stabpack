@@ -12,11 +12,12 @@ program main
     type(res_t), pointer :: next => null()
   end type
 
-  character(len=255) :: arg, datafile
+  character(len=255) :: arg, datafile, usage
   integer :: bezn, i, id, m, n, num
-  real :: a(2), b(2), bound, dx, fos, p0, rd, xlim(2)
+  real :: a(2), b(2), bound, dx, fos, rd, xlim(2)
   type(res_t) :: result
 
+  usage = 'usage: stab [-ddx] [-ffos] [-n[B]num] [-rratio] [-x0|1value] file'
   bezn = 3
   dx = 5.
   fos = 1.3
@@ -43,25 +44,28 @@ program main
           read(arg(4:), *) xlim(1)
         else if(arg(3:3) == '1') then
           read(arg(4:), *) xlim(2)
+        else
+          call fatal(usage)
         end if
+      case default
+        call fatal(usage)
       end select
     else
       datafile = arg
     end if
   end do
-  if(len_trim(datafile) == 0) call fatal('file missing.')
+  if(len_trim(datafile) == 0) call fatal(usage)
 
   call scxini(datafile, xlim)
   bound = sum(scxdim(:, 1))
   m = size(scxcrk, 2)
-  !$omp parallel do private(i, a, b, p0)
+  !$omp parallel do private(i, a, b)
   do i = 1, m
     a = scxcrk(:2, i)
-    p0 = scxcrk(3, i)
     b(1) = a(1) + dx
     do while(b(1) < bound)
       b(2) = scxtop(b(1))
-      call stab(a, b, p0)
+      call stab(a, b, scxcrk(3, 1))
       b(1) = b(1) + dx
     end do
   end do

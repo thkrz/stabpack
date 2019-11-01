@@ -4,12 +4,13 @@ program main
   use scx
   implicit none
 
-  character(len=255) :: arg, datafile, precfile
+  character(len=255) :: arg, datafile, precfile, useage
   integer :: bins, i, id
   real :: dt, xlim(2)
 
+  usage = 'usage: seep [-bnum] [-tstep] -Pprecfile [-x0|1value] file'
   bins = 100
-  d = 1.
+  dt = 1.
   xlim = 0
   do i = 1, get_argument_count()
     call get_command_argument(i, arg)
@@ -17,22 +18,26 @@ program main
       select case(arg(2:2))
       case('b')
         read(arg(3:), *) bins
-      case('d')
+      case('t')
         read(arg(3:), *) dt
-      case('p')
+      case('P')
         precfile = arg(3:)
       case('x')
         if(arg(3:3) == '0') then
           read(arg(4:), *) xlim(1)
         else if(arg(3:3) == '1') then
           read(arg(4:), *) xlim(2)
+        else
+          call fatal(usage)
         end if
+      case default
+        call fatal(usage)
       end select
     else
       datafile = arg
     end if
   end do
-  if(len_trim(datafile) == 0) call fatal('file missing.')
+  if(len_trim(datafile) == 0) call fatal(usage)
 
   call scxini(datafile, xlim)
   call scxdel
