@@ -153,6 +153,20 @@ contains
     end do
   end subroutine
 
+  pure function bezsim(p, q) result(lambda)
+    real, intent(in), dimension(:, :) :: p, q
+    real :: lambda
+    integer :: i, n
+
+    n = size(p, 2)
+    if(n /= size(q, 2)) error stop
+    lambda = 0
+    do i = 1, n
+      lambda = lambda + norm2(p(:, i) - q(:, i))
+    end do
+    lambda = lambda / n
+  end function
+
   pure function inv(a) result(b)
     real, intent(in) :: a(2, 2)
     real :: b(2, 2)
@@ -164,20 +178,6 @@ contains
     b(2, 1) = -detinv * a(2, 1)
     b(1, 2) = -detinv * a(1, 2)
     b(2, 2) = +detinv * a(1, 1)
-  end function
-
-  pure function bezsim(p, q) result(lambda)
-    real, intent(in), dimension(:, :) :: p, q
-    real :: lambda
-    integer :: n
-
-    n = size(p, 2)
-    if(n /= size(q, 2)) error stop
-    lambda = 0
-    do i = 1, n
-      lambda = lambda + norm2(p(:, i) - q(:, i))
-    end do
-    lambda = lambda / n
   end function
 end module
 
@@ -222,7 +222,7 @@ contains
     do concurrent(i = 2:n+1)
       xx(:, i) = x + p + (p1 - p2) * ident(:, i-1)
     end do
-    do concurrent(j = 1:n+1)
+    do j = 1, n+1
       f(j) = fcn(xx(:, j))
     end do
     facc = merge(tol, sqrt(epsilon(1.)), present(tol))
@@ -350,14 +350,14 @@ module rtfind
   integer, parameter :: MAXIT = 1000
 
 contains
-  pure subroutine rtnewt(funcd, x0, x, tol, stat)
+  pure subroutine rtnewt(funcd, p, x0, x, tol, stat)
     interface
-      pure subroutine funcd(x, fval, fderiv)
-        real, intent(in) :: x
+      pure subroutine funcd(x, p, fval, fderiv)
+        real, intent(in) :: x, p(:)
         real, intent(out) :: fval, fderiv
       end subroutine
     end interface
-    real, intent(in) :: x0
+    real, intent(in) :: p(:), x0
     real, intent(out) :: x
     real, intent(in), optional :: tol
     integer, intent(out), optional :: stat
@@ -368,7 +368,7 @@ contains
     xacc = merge(tol, sqrt(epsilon(1.)), present(tol))
     x = x0
     do j = 1, MAXIT
-      call funcd(x, f, df)
+      call funcd(x, p, f, df)
       dx = f / df
       x = x - dx
       if(abs(dx) < xacc) return

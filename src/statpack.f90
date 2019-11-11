@@ -10,7 +10,7 @@ contains
     real, intent(in) :: x(:, :)
     real, intent(inout) :: m(:, :)
     real :: tol, var, varmin
-    integer :: c(size(m)), s(size(x, 2))
+    integer :: c(size(m, 1), size(m, 2)), s(size(x, 2))
     integer :: i, j, k, num, n, z
 
     tol = sqrt(epsilon(1.))
@@ -38,11 +38,3 @@ contains
     end do
   end subroutine
 end module
-
-module rcontd
-  implicit none
-  private
-
-contains
-end module
-

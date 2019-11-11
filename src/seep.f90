@@ -1,10 +1,10 @@
 program main
-  use mesh, only: mesh_t
+  use mesh, only: grid_t
   use ssat_env, only: fatal
   use scx
   implicit none
 
-  character(len=255) :: arg, datafile, precfile, useage
+  character(len=255) :: arg, datafile, precfile, usage
   integer :: bins, i, id
   real :: dt, dx, dy, xlim(2)
 
@@ -12,7 +12,7 @@ program main
   bins = 100
   dt = 1.
   xlim = 0
-  do i = 1, get_argument_count()
+  do i = 1, command_argument_count()
     call get_command_argument(i, arg)
     if(arg(:1) == '-') then
       select case(arg(2:2))

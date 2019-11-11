@@ -1,7 +1,56 @@
-program main
+module crit
   use bez, only: bezarc, bezlin
   use fmin, only: amoeba
   use razdol, only: razslv
+  use scx
+  implicit none
+  private
+  public stab
+
+  real, parameter :: maxmu = huge(1.)
+
+  subroutine stab(num, q, r, p0, mode, mu, p, stat)
+    integer, intent(in) :: num
+    real, intent(in) :: q(2), r(2), p0
+    character, intent(in) :: mode
+    real, intent(out) :: mu, p(:, :)
+    integer, intent(out) :: stat
+    real, dimension(num) :: w, c, phi, u, alpha, b
+    real, dimension(0:num) :: e, h, t
+    real :: popt(2 * size(p, 2) - 4)
+    integer :: bezn, err
+
+    bezn = size(p, 2) - 1
+    stat = 0
+    if(mode == 'L') then
+      call bezarc(q, r, p)
+    else if(mode == 'A')
+      call bezlin(q, r, p)
+    else
+      stat = -1
+      return
+    end if
+    popt = pack(p(:, 2:bezn), .true.)
+    call amoeba(mos, popt, fn=mu, stat=stat)
+  contains
+    function mos(x)
+      real, intent(in) :: x(:)
+      integer :: err
+
+      p(:, 2:bezn) = reshape(x, (/ 2, bezn - 1 /))
+      scxcut(num, rd, p, w, c, phi, u, alpha, b, h, err)
+      if(err /= 0) then
+        mos = maxmu
+        return
+      end if
+      call razslv(num, w, c, phi, u, alpha, b, h, fos, e, t, mu, p0)
+      mos = mu
+    end function
+  end subroutine
+end module
+
+program main
+  use crit
   use ssat_env, only: fatal
   use scx
   implicit none
@@ -23,7 +72,7 @@ program main
   fos = 1.3
   rd = .3
   xlim = 0
-  do i = 1, get_argument_count()
+  do i = 1, command_argument_count()
     call get_command_argument(i, arg)
     if(arg(:1) == '-') then
       select case(arg(2:2))
@@ -57,7 +106,7 @@ program main
   if(len_trim(datafile) == 0) call fatal(usage)
 
   call scxini(datafile, xlim)
-  bound = sum(scxdim(:, 1))
+  bound = scxdim(1, 1) + scxdim(2, 1)
   m = size(scxcrk, 2)
   !$omp parallel do private(i, a, b)
   do i = 1, m
@@ -69,6 +118,7 @@ program main
       b(1) = b(1) + dx
     end do
   end do
+  !$omp end parallel do
 
   n = ceiling(scxdim(2, 1) / dx)
   !$omp parallel do private(i, j, a, b)
@@ -81,47 +131,11 @@ program main
       call stab(a, b, 0.)
     end do
   end do
+  !$omp end parallel do
   call scxdel
   stop
 
 contains
-  subroutine stab(a, b, p0)
-    real, parameter :: maxmu = huge(1.)
-    real, intent(in) :: a(2), b(2), p0
-    real, dimension(num) :: w, c, phi, u, alpha, b
-    real, dimension(0:num) :: e, h, t
-    real :: p(2, bezn + 1)
-    integer :: err
-
-    call bezarc(a, b, p)
-    call calc
-    call bezlin(a, b, p)
-    call calc
-  contains
-    subroutine calc
-      real :: mu, popt(2 * bezn - 2)
-      integer :: err
-
-      popt = pack(p(:, 2:bezn), .true.)
-      call amoeba(mos, popt, fn=mu, stat=err)
-      if(err == 0 .and. mu < 1) call resadd(mu, p)
-    end subroutine
-
-    function mos(x)
-      real, intent(in) :: x(:)
-      integer :: err
-
-      p(:, 2:bezn) = reshape(x, (/ 2, bezn - 1 /))
-      scxcut(num, rd, p, w, c, phi, u, alpha, b, h, err)
-      if(err /= 0) then
-        mos = maxmu
-        return
-      end if
-      call razslv(num, w, c, phi, u, alpha, b, h, fos, e, t, mu, p0)
-      mos = mu
-    end function
-  end subroutine
-
   subroutine resadd(mu, p)
     real, intent(in) :: mu, p(:, :)
     type(res_t) :: i
