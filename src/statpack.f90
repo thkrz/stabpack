@@ -38,3 +38,11 @@ contains
     end do
   end subroutine
 end module
+
+module rcontd
+  implicit none
+  private
+
+contains
+end module
+

@@ -1,11 +1,11 @@
 module razdol
   implicit none
   private
-  public razf
+  public razd
   public razslv
 
 contains
-  pure function razd(n, w, c, phi, u, alpha, b, h, f, e, t) result(mu)
+  pure function deriv(n, w, c, phi, u, alpha, b, h, f, e, t) result(mu)
     integer, intent(in) :: n
     real, dimension(n), intent(in) :: w, c, phi, u, alpha, b
     real, intent(in) :: h(n + 1), f
@@ -33,7 +33,7 @@ contains
     mu = (de(i) * e(n + 1) - de(n + 1) * e(i)) / e(i)**2
   end function
 
-  pure subroutine razf(f, wa, fval, fderiv)
+  pure subroutine razd(f, wa, fval, fderiv)
     integer, parameter :: nwa = 7
     real, intent(in) :: f, wa(:)
     real, intent(out) :: fval, fderiv
@@ -52,7 +52,7 @@ contains
 
       call razslv(n, w, c, phi, u, alpha, b, h, f, e, t, mu)
       fval = mu - 1.
-      fderiv = razd(n, w, c, phi, u, alpha, b, h, f, e, t)
+      fderiv = deriv(n, w, c, phi, u, alpha, b, h, f, e, t)
     end associate
   end subroutine
 
