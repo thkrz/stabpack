@@ -1,22 +1,23 @@
 include config.mk
 
-PACK = src/bempack.o src/mospack.o src/numpack.o \
+CMD = seep stab swcc
+PACKS = src/bempack.o src/mospack.o src/numpack.o \
 	src/statpack.o src/wapack.o
 
 %.o: %.f90
 	@echo FC $<
 	@${FC} -o $@ -c ${FFLAGS} $<
 
-all: seep stab
+all: ${CMD}
 
 lbfgsb:
 	@${MAKE} -C src/$@
 
-seep: ${PACK} src/ssat_env.o src/scx.o src/seep.o
+seep: ${PACKS} src/ssat_env.o src/scx.o src/seep.o
 	@echo LD $@
 	@${FC} -o $@ $^ ${LDFLAGS}
 
-stab: ${PACK} src/ssat_env.o src/scx.o src/stab.o
+stab: ${PACKS} src/ssat_env.o src/scx.o src/stab.o
 	@echo LD $@
 	@${FC} -o $@ $^ ${LDFLAGS}
 
@@ -29,6 +30,6 @@ hyp2f1: src/numpack.o test/hyp2f1.o
 clean:
 	@echo cleaning...
 	@find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
-	@rm -f ssat
+	@rm -f ${CMD}
 
 .PHONY: all clean

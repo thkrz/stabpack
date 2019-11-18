@@ -185,9 +185,11 @@ module fmin
   implicit none
   private
   public amoeba
+  public brent
+  public mnbrak
 
 contains
-  subroutine amoeba(fcn, x, tol, fn, stat)
+  subroutine amoeba(fcn, x, fn, tol, stat)
     interface
       function fcn(x)
         real, intent(in) :: x(:)
@@ -195,15 +197,15 @@ contains
       end function
     end interface
     real, intent(inout) :: x(:)
+    real, intent(out) :: fn
     real, intent(in), optional :: tol
-    real, intent(out), optional :: fn
     integer, intent(out), optional :: stat
     real :: c, alpha, beta, gamma, delta, &
             f(size(x)+1), fc, fe, fr, ftmp, &
             xx(size(x), size(x)+1), xc(size(x)), &
             xe(size(x)), xr(size(x)), xtmp(size(x)), &
             ident(size(x), size(x)), p(size(x)), p1, p2, facc
-    integer :: i, j, k, maxit, n
+    integer :: i, j, k, itmax, n
 
     n = size(x)
     alpha = 1.
@@ -227,8 +229,8 @@ contains
     end do
     facc = merge(tol, sqrt(epsilon(1.)), present(tol))
     if(present(stat)) stat = 0
-    maxit = n * 200
-    do i = 1, maxit
+    itmax = n * 200
+    do i = 1, itmax
       do j = 2, n+1
         k = j - 1
         ftmp = f(j)
@@ -274,46 +276,177 @@ contains
           end do
         end if
       end if
-      if(present(fn)) fn = f(1)
+      fn = f(1)
       if(sqrt(sum(((f - fcn(x))**2) / n)) < facc) return
     end do
     if(present(stat)) stat = -1
   end subroutine
-end module
 
-module intgrt
-  implicit none
-  private
-  public nsimp
-
-contains
-  pure function nsimp(fcn, a, b, n) result(f)
+  function brent(ax, bx, cx, func, tol, xmin, stat)
+    real, intent(in) :: ax, bx, cx, tol
+    real, intent(out) :: xmin
+    integer, intent(out), optional :: stat
+    real :: brent
     interface
-      pure function fcn(x)
+      function func(x)
         real, intent(in) :: x
-        real :: fcn
+        real :: func
       end function
     end interface
-    real, intent(in) :: a, b
-    integer, intent(in), optional :: n
-    real :: f, f0, f1, f12, h, x0, x1
-    integer :: i, nn
+    real, parameter :: cgold = 0.3819660, zeps = 1.0e-3 * epsilon(ax)
+    integer, parameter :: itmax = 100
+    integer :: i
+    real :: a, b, c, d, e, etemp, fu, fv, fw, fx, p, q, r, tol1, tol2, u, v, w, x, xm
 
-    nn = 3
-    if(present(n)) nn = n
-    f = 0
-    h = (b - a) / nn
-    x0 = a
-    f0 = fcn(x0)
-    do i = 1, nn
-      x1 = x0 + h
-      f1 = fcn(x1)
-      f12 = fcn((x0 + x1) / 2.)
-      f = f + h / 6. * (f0 + 4. * f12 + f1)
-      x0 = x1
-      f0 = f1
+    if(present(stat)) stat = 0
+    a = min(ax, cx)
+    b = max(ax, cx)
+    v = bx
+    w = v
+    x = v
+    e = 0
+    fx = func(x)
+    fv = fx
+    fw = fx
+    do i = 1, itmax
+      xm = .5 * (a + b)
+      tol1 = tol * abs(x) + zeps
+      tol2 = 2. * tol1
+      if(abs(x - xm) <= (tol2 - .5 * (b - a))) then
+        xmin = x
+        brent = fx
+        return
+      end if
+      if(abs(e) > tol1) then
+        r = (x - w) * (fx - fv)
+        q = (x - v) * (fx - fw)
+        p = (x - v) * q - (x - w) * r
+        q = 2. * (q - r)
+        if(q > 0) p = -p
+        q = abs(q)
+        etemp = e
+        e = d
+        if(abs(p) >= abs(.5 * q * etemp) .or. &
+          p <= q * (a - x) .or. p >= q * (b - x)) then
+          e = merge(a - x, b - x, x >= xm)
+          d = cgold * e
+        else
+          d = p / q
+          u = x + d
+          if(u - a < tol2 .or. b - u < tol2) d = sign(tol1, xm - x)
+        end if
+      else
+        e = merge(a - x, b - x, x >= xm)
+        d = cgold * e
+      end if
+      u = merge(x + d, x + sign(tol1, d), abs(d) >= tol1)
+      fu = func(u)
+      if(fu <= fx) then
+        if(u >= x) then
+          a = x
+        else
+          b = x
+        end if
+        call shft(v, w, x, u)
+        call shft(fv, fw, fx, fu)
+      else
+        if(u < x) then
+          a = u
+        else
+          b = u
+        end if
+        if(fu <= fw .or. w == x) then
+          v = w
+          fv = fw
+          w = u
+          fw = fu
+        else if(fu <= fv .or. v == x .or. v == w) then
+          v = u
+          fv = fu
+        end if
     end do
+    if(present(stat)) stat = -1
   end function
+
+  subroutine mnbrak(ax, bx, cx, fa, fb, fc, func)
+    real, intent(inout) :: ax, bx
+    real, intent(out) :: cx, fa, fb, fc
+    interface
+      function func(x)
+        real, intent(in) :: x
+        real :: func
+      end function
+    end interface
+    real, parameter :: gold = 1.618034, glimit = 100.0
+    real :: fu, q, r, u, ulim
+
+    fa = func(ax)
+    fb = func(ab)
+    if(fb > fa) then
+      call swap(ax, bx)
+      call swap(fa, fb)
+    end if
+    cx = bx + gold * (bx - ax)
+    fc = func(cx)
+    do
+      if(fb < fc) return
+      r = (bx - ax) * (fb - fc)
+      q = (bx - cx) * (fb - fa)
+      u = bx - ((bx - cx) * q - (bx - ax) * r) / (2. * sign(max(abs(q - r), tiny(1.)), q - r))
+      ulim = bx + glimit * (cx - bx)
+      if((bx - u) * (u - cx) > 0.) then
+        fu = func(u)
+        if(fu < fc) then
+          ax = bx
+          fx = fb
+          bx = u
+          fb = fu
+          return
+        else if(fu > fb) then
+          cx = u
+          fc = fu
+          return
+        end if
+        u = cx + gold * (cx - bx)
+        fu = func(u)
+      else if((cx - u) * (u - ulim) > 0.) then
+        fu = func(u)
+        if(fu < fc) then
+          bx = cx
+          cx = u
+          u = cx + gold * (cx - bx)
+          call shft(fb, fc, fu, func(u))
+        end if
+      else if((u - ulim) * (ulim - cx) >= 0.) then
+        u = ulim
+        fu = func(u)
+      else
+        u = cx + gold * (cx - bx)
+        fu = func(u)
+      end if
+      call shft(ax, bx, cx, u)
+      call shft(fa, fb, fc, fu)
+    end do
+  end subroutine
+
+  pure subroutine shft(a, b, c, d)
+    real, intent(out) :: a
+    real, intent(inout) :: b, c
+    real, intent(in) :: d
+
+    a = b
+    b = c
+    c = d
+  end subroutine
+
+  pure subroutine swap(a, b)
+    real, intent(inout) :: a, b
+    real :: c
+
+    c = a
+    a = b
+    b = c
+  end subroutine
 end module
 
 module intp1d
@@ -347,7 +480,7 @@ module rtfind
   public rtnewt
   public zbrent
 
-  integer, parameter :: MAXIT = 1000
+  integer, parameter :: itmax = 1000
 
 contains
   pure subroutine rtnewt(funcd, p, x0, x, tol, stat)
@@ -367,7 +500,7 @@ contains
     if(present(stat)) stat = 0
     xacc = merge(tol, sqrt(epsilon(1.)), present(tol))
     x = x0
-    do j = 1, MAXIT
+    do j = 1, itmax
       call funcd(x, p, f, df)
       dx = f / df
       x = x - dx
@@ -404,7 +537,7 @@ contains
       return
     end if
     fc = fb
-    do i = 1, MAXIT
+    do i = 1, itmax
       if(fb * fc > 0) then
         c = a
         fc = fa
@@ -468,7 +601,7 @@ module spcfnc
 
 contains
   elemental function hyp2f1(a, b, c, z) result(f1)
-    integer, parameter :: maxit = 1000
+    integer, parameter :: itmax = 1000
     real, intent(in) :: a, b, c, z
     real :: aa, bb, cc, f1, fac, temp
     integer :: n
@@ -478,7 +611,7 @@ contains
     aa = a
     bb = b
     cc = c
-    do n = 1, maxit
+    do n = 1, itmax
       fac = fac * ((aa * bb) / cc) * z / n
       f1 = temp + fac
       if(f1 == temp) return
