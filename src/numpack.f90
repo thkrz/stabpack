@@ -1,4 +1,47 @@
+module num_env
+  implicit none
+  private
+  public inv2
+  public shft
+  public swap
+
+contains
+  pure subroutine inv2(a)
+    real, intent(inout) :: a(2, 2)
+    real :: b(2, 2)
+    real :: detinv
+
+    detinv = 1. / (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1))
+
+    b(1, 1) = +detinv * a(2, 2)
+    b(2, 1) = -detinv * a(2, 1)
+    b(1, 2) = -detinv * a(1, 2)
+    b(2, 2) = +detinv * a(1, 1)
+    a = b
+  end subroutine
+
+  pure subroutine shft(a, b, c, d)
+    real, intent(out) :: a
+    real, intent(inout) :: b, c
+    real, intent(in) :: d
+
+    a = b
+    b = c
+    c = d
+  end subroutine
+
+  pure subroutine swap(a, b)
+    real, intent(inout) :: a, b
+    real :: c
+
+    c = a
+    a = b
+    b = c
+  end subroutine
+end module
+
 module bez
+  use num_env, only: inv2
   implicit none
   private
   public bezarc
@@ -38,7 +81,7 @@ contains
       p(:, i) = a
     end do
     dx =  k * r * (/ sinb, cosb /)
-    rot = inv(rot)
+    call inv2(rot)
     p(:, m) = matmul(rot, dx) + a
     p(:, m + 1) = matmul(rot, br + dx - a) + a
     do i = m + 2, n
@@ -166,22 +209,10 @@ contains
     end do
     lambda = lambda / n
   end function
-
-  pure function inv(a) result(b)
-    real, intent(in) :: a(2, 2)
-    real :: b(2, 2)
-    real :: detinv
-
-    detinv = 1. / (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1))
-
-    b(1, 1) = +detinv * a(2, 2)
-    b(2, 1) = -detinv * a(2, 1)
-    b(1, 2) = -detinv * a(1, 2)
-    b(2, 2) = +detinv * a(1, 1)
-  end function
 end module
 
 module fmin
+  use num_env, only: shft, swap
   implicit none
   private
   public amoeba
@@ -427,25 +458,6 @@ contains
       call shft(ax, bx, cx, u)
       call shft(fa, fb, fc, fu)
     end do
-  end subroutine
-
-  pure subroutine shft(a, b, c, d)
-    real, intent(out) :: a
-    real, intent(inout) :: b, c
-    real, intent(in) :: d
-
-    a = b
-    b = c
-    c = d
-  end subroutine
-
-  pure subroutine swap(a, b)
-    real, intent(inout) :: a, b
-    real :: c
-
-    c = a
-    a = b
-    b = c
   end subroutine
 end module
 
