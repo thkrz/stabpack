@@ -48,7 +48,7 @@ contains
   subroutine loglap_fit(self, y)
     use fmin, only: brent
     class(loglap_gen), intent(inout) :: self
-    real, intent(in), dimension(:) :: x, y
+    real, intent(in), dimension(:) :: y
     real :: fmin, xmin
     integer :: n
 
@@ -114,5 +114,47 @@ contains
     else
       x = self%d * ((1. - p) * (self%a + self%b) / self%b)**(-1. / self%a)
     end if
+  end function
+
+  elemental function lognrm_cdf(self, x) result(p)
+    class(lognrm_gen), intent(in) :: self
+    real, intent(in) :: x
+    real :: p
+
+    p = .5 + .5 * erf(log(x - self%m) / (sqrt(2.) * self%s))
+  end function
+
+  subroutine lognrm_fit(self, y)
+    class(lognrm_gen), intent(inout) :: self
+    real :: p
+    integer :: n
+
+    n = size(y)
+    p = 0
+    do i = 1, n
+      p = p + log(y(i))
+    end do
+    self%m = p / n
+    self%s = 0
+    do i = 1, n
+      self%s = self%s + (log(y(i)) - p)**2
+    end do
+    self%s = sqrt(self%s / n)
+  end subroutine
+
+  elemental function lognrm_pdf(self, x) result(p)
+    class(lognrm_gen), intent(in) :: self
+    real, intent(in) :: x
+    real :: p
+
+    p = 1. / (x * self%s * sqrt(2. * pi)) * exp(-(log(x) - self%m)**2 / (2. * self%s**2))
+  end function
+
+  elemental function lognrm_ppf(self, p) result(x)
+    class(lognrm_gen), intent(in) :: self
+    real, intent(in) :: p
+    real :: x
+
+    x = 1
   end function
 end module
