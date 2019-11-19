@@ -1,11 +1,23 @@
 module num_env
   implicit none
   private
+  protected pi
+  public deg
   public inv2
+  public rad
   public shft
   public swap
 
+  real, parameter :: pi = 4. * atan(1.)
+
 contains
+  elemental function deg(r) result(d)
+    real, intent(in) :: r
+    real :: d
+
+    d = r * 180. / pi
+  end function
+
   pure subroutine inv2(a)
     real, intent(inout) :: a(2, 2)
     real :: b(2, 2)
@@ -19,6 +31,13 @@ contains
     b(2, 2) = +detinv * a(1, 1)
     a = b
   end subroutine
+
+  elemental function rad(d) result(r)
+    real, intent(in) :: d
+    real :: r
+
+    r = d * pi / 180.
+  end function
 
   pure subroutine shft(a, b, c, d)
     real, intent(out) :: a
@@ -41,7 +60,7 @@ contains
 end module
 
 module bez
-  use num_env, only: inv2
+  use num_env, only: inv2, pi
   implicit none
   private
   public bezarc
@@ -52,8 +71,7 @@ module bez
 
 contains
   pure subroutine bezarc(a, b, p)
-    real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.), &
-                       pi = 4. * atan(1.)
+    real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.)
     real, intent(in) :: a(:), b(:)
     real, intent(out) :: p(:, :)
     integer :: i, m, n
