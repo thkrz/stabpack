@@ -1,4 +1,5 @@
 program main
+  use ieee_arithmetic
   use mesh, only: grid_t
   use ssat_env, only: fatal
   use scx
@@ -11,7 +12,8 @@ program main
   usage = 'usage: seep [-bnum] [-dx|yvalue] [-tstep] [-Pprecfile] [-x0|1value] file'
   bins = 100
   dt = 1.
-  xlim = 0
+  xlim(1) = ieee_value(xlim(1), ieee_negative_inf)
+  xlim(2) = ieee_value(xlim(2), ieee_positive_inf)
   do i = 1, command_argument_count()
     call get_command_argument(i, arg)
     if(arg(:1) == '-') then

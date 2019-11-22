@@ -1,8 +1,9 @@
 include config.mk
 
-CMD = seep stab swcc
-PACKS = src/bempack.o src/mospack.o src/numpack.o \
+CMD = seep stab
+STABPACK = src/bempack.o src/mospack.o src/numpack.o \
 	src/statpack.o src/wapack.o
+OBJ = src/ssat_env.o src/scx.o
 
 %.o: %.f90
 	@echo FC $<
@@ -13,11 +14,11 @@ all: ${CMD}
 lbfgsb:
 	@${MAKE} -C src/$@
 
-seep: ${PACKS} src/ssat_env.o src/scx.o src/seep.o
+seep: ${STABPACK} ${OBJ} src/seep.o
 	@echo LD $@
 	@${FC} -o $@ $^ ${LDFLAGS}
 
-stab: ${PACKS} src/ssat_env.o src/scx.o src/stab.o
+stab: ${STABPACK} ${OBJ} src/stab.o
 	@echo LD $@
 	@${FC} -o $@ $^ ${LDFLAGS}
 

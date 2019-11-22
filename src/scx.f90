@@ -1,4 +1,5 @@
 module scx
+  use ieee_arithmetic, only: ieee_is_finite
   use bez, only: bezcrv
   use intp1d, only: interp
   use mesh, only: grid_t
@@ -39,22 +40,22 @@ module scx
   integer :: scxnum
 
 contains
-  ! elemental function scxcrk(x) result(y)
-  !   real, intent(in) :: x
-  !   real :: y
-  !  integer :: i
+  elemental function depth(x) result(y)
+    real, intent(in) :: x
+    real :: y
+    integer :: i
 
-  !   y = scxtop(x)
-  !   i = 1
-  !   do while(strata(i)%c == 0)
-  !     y = strata(i)%bot(x)
-  !     i = i + 1
-  !   end do
-  !   associate(c => strata(i)%c, w => strata(i)%w,&
-  !             phi => strata(i)%phi)
-  !     y = y - 2. * c / w * tan(atan(1.) + .4 * phi)
-  !   end associate
-  ! end function
+    y = scxtop(x)
+    i = 1
+    do while(strata(i)%c == 0)
+      y = strata(i)%bot(x)
+      i = i + 1
+    end do
+    associate(c => strata(i)%c, w => strata(i)%w,&
+              phi => strata(i)%phi)
+      y = y - 2. * c / w * tan(atan(1.) + .4 * phi)
+    end associate
+  end function
 
   pure subroutine scxcut(n, rd, p, w, c, phi, u, alpha, b, h, stat)
     integer, intent(in) :: n
@@ -101,49 +102,53 @@ contains
     scxnum = 0
   end subroutine
 
-  subroutine scxini(name, xlim, grid)
+  subroutine scxini(name, xlim, pf)
     character(*), intent(in) :: name
     real, intent(in) :: xlim(2)
-    character(*), intent(in), optional :: grid
+    character(*), intent(in), optional :: pf
     character(len=255) :: msg
     real :: alpha, h
     integer :: err, id, i, m, n
 
-    pwpini = present(grid) .and. len_trim(grid) > 0
-    if(pwpini) call pwp%load(grid)
+    pwpini = present(pf) .and. len_trim(pf) > 0
+    if(pwpini) call pwp%load(pf)
 
     open(newunit=id, file=name, status='old', iostat=err, iomsg=msg)
     if(err /= 0) call fatal(msg)
-    read(id, *, iostat=err, iomsg=msg) alpha
-    if(err /= 0) call fatal(msg)
-    tana = tan(radians(alpha))
+
     read(id, *, iostat=err, iomsg=msg) m, n
     if(err /= 0) call fatal(msg)
     allocate(ridge(2 + n, m))
     read(id, *, iostat=err, iomsg=msg) (ridge(:, i), i=1,m)
     if(err /= 0) call fatal(msg)
-    read(id, *, iostat=err, iomsg=msg) m
+
+    read(id, *, iostat=err, iomsg=msg) alpha
     if(err /= 0) call fatal(msg)
-    scxnum = m
-    allocate(strata(m))
-    do i = 1, m
+    tana = tan(radians(alpha))
+    read(id, *, iostat=err, iomsg=msg) scxnum
+    if(err /= 0) call fatal(msg)
+    allocate(strata(scxnum))
+    do i = 1, scxnum
       read(id, '(10(F5.2))', iostat=err, iomsg=msg) h, strata(i)
       if(err /= 0) call fatal(msg)
       strata(i)%x = interp(h, ridge(2, :), ridge(1, :))
       strata(i)%y = scxtop(strata(i)%x)
       strata(i)%d = merge(i, 0, i <= n)
     end do
+
     read(id, *, iostat=err, iomsg=msg) m
     if(err /= 0) call fatal(msg)
     allocate(scxcrk(2, m))
-    read(id, *, iostat=err, iomsg=msg) (scxcrk(:, i), i=1,m)
+    read(id, *, iostat=err, iomsg=msg) scxcrk(1, :)
     if(err /= 0) call fatal(msg)
+    scxcrk(2, :) = depth(scxcrk(1, :))
+
     close(id)
 
     m = size(ridge, 2)
-    scxdim(1, 1) = ridge(1, 1)
+    scxdim(1, 1) = merge(xlim(1), ridge(1, 1), ieee_is_finite(xlim(1)))
     scxdim(1, 2) = minval(ridge(2, :))
-    scxdim(2, 1) = ridge(1, m) - scxdim(1, 1)
+    scxdim(2, 1) = merge(xlim(2), ridge(1, m), ieee_is_finite(xlim(2))) - scxdim(1, 1)
     scxdim(2, 2) = maxval(ridge(2, :)) - scxdim(1, 2)
   end subroutine
 
