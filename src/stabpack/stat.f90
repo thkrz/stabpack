@@ -9,8 +9,8 @@ contains
   pure subroutine kmeans(x, m)
     real, intent(in) :: x(:, :)
     real, intent(inout) :: m(:, :)
-    real :: tol, v, vmin
-    integer :: c(size(m, 1), size(m, 2)), s(size(x, 2))
+    real :: c(size(m, 1), size(m, 2)), tol, v, vmin
+    integer :: s(size(x, 2))
     integer :: i, j, k, num, n, z
 
     tol = sqrt(epsilon(1.))

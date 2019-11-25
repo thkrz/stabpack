@@ -3,6 +3,7 @@ module scx
   use bez, only: bezcrv
   use intp1d, only: interp
   use mesh, only: grid_t
+  use num_env, only: rad
   use ssat_env
   implicit none
   private
@@ -124,7 +125,7 @@ contains
 
     read(id, *, iostat=err, iomsg=msg) alpha
     if(err /= 0) call fatal(msg)
-    tana = tan(radians(alpha))
+    tana = tan(rad(alpha))
     read(id, *, iostat=err, iomsg=msg) scxnum
     if(err /= 0) call fatal(msg)
     allocate(strata(scxnum))

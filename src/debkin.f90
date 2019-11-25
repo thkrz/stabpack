@@ -3,7 +3,7 @@ program main
   use ssat_env, only: fatal
   implicit none
 
-  character(len=255) :: arg, input, msg
+  character(len=255) :: arg, input, msg, usage
   real :: drag, depth(2)
   real, allocatable :: arr(:, :)
   integer :: err, i, id, m, n
@@ -46,7 +46,7 @@ program main
   if(err /= 0) call fatal(msg)
   close(id)
   call debkin(arr(1, :), arr(1+n, :), arr(2+n, :))
-  print '(I5,X,I5)', m, n
+  print '(I5,1X,I5)', m, n
   print '(*(F6.2))', (arr(:, i), i = 1, m)
   deallocate(arr)
   stop
@@ -59,20 +59,20 @@ contains
     integer :: i, n
 
     n = size(x)
-    i = minloc(y)
+    i = minloc(y1, 1)
     k = 0
-    call kin_(x, y, drag, 1, k)
-    call kin_(x, y, drag, -1, k)
+    call kin_(x, y1, drag, 1, k)
+    call kin_(x, y1, drag, -1, k)
     k = k / maxval(k)
     if(k(i) /= 1) call fatal('invalid drag.')
-    y2 = y - k * (depth(2) - depth(1)) + depth(1)
+    y2 = y1 - k * (depth(2) - depth(1)) + depth(1)
   end subroutine
 
   pure subroutine kin_(x, y, crr, dir, r)
     real, intent(in) :: x(:), y(:), crr
     integer, intent(in) :: dir
     real, intent(inout) :: r(:)
-    real :: wa(size(r))
+    real :: alpha, h, s, wa(size(r))
     integer :: e1, e2, e3, i, ii, j, jj, n
 
     n = size(x)
@@ -89,7 +89,7 @@ contains
       ii = i
       jj = j
       if(dir < 0) call swap(ii, jj)
-      wa(ii) = max(0, h + wa(jj) - crr * cos(alpha) * s)
+      wa(ii) = max(0., h + wa(jj) - crr * cos(alpha) * s)
     end do
     r = r + wa
   end subroutine

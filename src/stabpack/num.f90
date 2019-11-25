@@ -358,9 +358,10 @@ contains
     real, parameter :: cgold = 0.3819660, zeps = 1.0e-3 * epsilon(ax)
     integer, parameter :: itmax = 100
     integer :: i
-    real :: a, b, c, d, e, etemp, fu, fv, fw, fx, p, q, r, tol1, tol2, u, v, w, x, xm
+    real :: a, b, d, e, etemp, fu, fv, fw, fx, p, q, r, tol1, tol2, u, v, w, x, xm
 
     if(present(stat)) stat = 0
+    brent = bx
     a = min(ax, cx)
     b = max(ax, cx)
     v = bx
