@@ -1,8 +1,8 @@
 include config.mk
 
-CMD = seep stab
-STABPACK = src/bempack.o src/mospack.o src/numpack.o \
-	src/statpack.o src/wapack.o
+CMD = debkin seep stab
+STABPACK = src/stabpack/bem.o src/stabpack/mos.o src/stabpack/num.o \
+	src/stabpack/stat.o src/stabpack/wa.o
 OBJ = src/ssat_env.o src/scx.o
 
 %.o: %.f90
@@ -13,6 +13,10 @@ all: ${CMD}
 
 lbfgsb:
 	@${MAKE} -C src/$@
+
+debkin: ${STABPACK} ${OBJ} src/debkin.o
+	@echo LD $@
+	@${FC} -o $@ $^ ${LDFLAGS}
 
 seep: ${STABPACK} ${OBJ} src/seep.o
 	@echo LD $@

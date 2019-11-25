@@ -1,7 +1,7 @@
 module num_env
   implicit none
   private
-  protected pi
+  public pi
   public deg
   public inv2
   public rad
@@ -9,6 +9,10 @@ module num_env
   public swap
 
   real, parameter :: pi = 4. * atan(1.)
+
+  interface swap
+    procedure iswap, rswap
+  end interface
 
 contains
   elemental function deg(r) result(d)
@@ -49,7 +53,16 @@ contains
     c = d
   end subroutine
 
-  pure subroutine swap(a, b)
+  pure subroutine iswap(a, b)
+    integer, intent(inout) :: a, b
+    integer :: c
+
+    c = a
+    a = b
+    b = c
+  end subroutine
+
+  pure subroutine rswap(a, b)
     real, intent(inout) :: a, b
     real :: c
 
@@ -413,6 +426,7 @@ contains
           v = u
           fv = fu
         end if
+      end if
     end do
     if(present(stat)) stat = -1
   end function
@@ -430,7 +444,7 @@ contains
     real :: fu, q, r, u, ulim
 
     fa = func(ax)
-    fb = func(ab)
+    fb = func(bx)
     if(fb > fa) then
       call swap(ax, bx)
       call swap(fa, fb)
@@ -447,7 +461,7 @@ contains
         fu = func(u)
         if(fu < fc) then
           ax = bx
-          fx = fb
+          fa = fb
           bx = u
           fb = fu
           return
