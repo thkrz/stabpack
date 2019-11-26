@@ -19,9 +19,9 @@ program main
         read(arg(3:), *) drag
       case('z')
         if(arg(3:3) == 'T') then
-          read(arg(4:), *) depth(1)
-        else if(arg(3:3) == 'B') then
           read(arg(4:), *) depth(2)
+        else if(arg(3:3) == 'B') then
+          read(arg(4:), *) depth(1)
         else
           call fatal(usage)
         end if
@@ -34,7 +34,7 @@ program main
       call fatal(usage)
     end if
   end do
-  if(len_trim(input) == 0 .or. depth(2) <= depth(1)) call fatal(usage)
+  if(len_trim(input) == 0 .or. depth(1) <= depth(2)) call fatal(usage)
 
   open(newunit=id, file=input, status='old', iostat=err, iomsg=msg)
   if(err /= 0) call fatal(msg)
@@ -67,7 +67,7 @@ contains
       h = y1(j) - y1(i)
       s = sqrt((x(j) - x(i))**2 + h**2)
       alpha = asin(h / s)
-      drag = (2. * h) / (n * cos(alpha) * s)
+      drag = h / (cos(alpha) * s * log(s))
       write(msg, '(A5,1X,F9.4)') 'DRAG:', drag
       call alert(msg)
     end if
@@ -75,7 +75,7 @@ contains
     k = k + kin_(x, y1, drag, -1)
     k = k / maxval(k)
     if(k(i) /= 1) call fatal('invalid drag.')
-    y2 = y1 - k * (depth(2) - depth(1)) + depth(1)
+    y2 = y1 - k * (depth(1) - depth(2)) + depth(2)
   end subroutine
 
   pure function kin_(x, y, crr, dir) result(r)
