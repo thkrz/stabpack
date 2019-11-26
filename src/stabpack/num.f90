@@ -367,7 +367,7 @@ contains
     v = bx
     w = v
     x = v
-    e = 0
+    e = 0.
     fx = func(x)
     fv = fx
     fw = fx

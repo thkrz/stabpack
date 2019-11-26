@@ -1,4 +1,4 @@
-module mesh
+module grid
   implicit none
   private
   public grid_t
@@ -21,10 +21,10 @@ module mesh
   end type
 
 contains
-  subroutine grid_t_dump(self, name)
+  subroutine grid_t_dump(self, name, stat)
     class(grid_t), intent(in) :: self
     character(*), intent(in) :: name
-    integer :: id, i, j
+    integer, intent(out) :: stat
   end subroutine
 
   pure function grid_t_get(self, x, y) result(v)
@@ -42,10 +42,10 @@ contains
     end if
   end function
 
-  subroutine grid_t_load(self, name)
+  subroutine grid_t_load(self, name, stat)
     class(grid_t), intent(in) :: self
     character(*), intent(in) :: name
-    integer :: id, i, j
+    integer, intent(out) :: stat
   end subroutine
 
   pure subroutine grid_t_init(self, extent, dx, dy, nan)

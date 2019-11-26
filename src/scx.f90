@@ -1,15 +1,15 @@
 module scx
   use ieee_arithmetic, only: ieee_is_finite
   use bez, only: bezcrv
+  use grid, only: grid_t
   use intp1d, only: interp
-  use mesh, only: grid_t
   use num_env, only: rad
   use ssat_env
   implicit none
   private
   public scxcrk
-  protected scxdim
-  protected scxnum
+  public scxdim
+  public scxnum
   public scxcut
   public scxdel
   public scxini
@@ -112,7 +112,7 @@ contains
     integer :: err, id, i, m, n
 
     pwpini = present(pf) .and. len_trim(pf) > 0
-    if(pwpini) call pwp%load(pf)
+    if(pwpini) call pwp%load(pf, err)
 
     open(newunit=id, file=name, status='old', iostat=err, iomsg=msg)
     if(err /= 0) call fatal(msg)

@@ -1,12 +1,12 @@
 program main
   use ieee_arithmetic
-  use mesh, only: grid_t
+  use grid, only: grid_t
   use ssat_env, only: fatal
   use scx
   implicit none
 
   character(len=255) :: arg, datafile, precfile, usage
-  integer :: bins, i, id
+  integer :: bins, i
   real :: dt, dx, dy, xlim(2)
 
   usage = 'usage: seep [-bnum] [-dx|yvalue] [-tstep] [-Pprecfile] [-x0|1value] file'

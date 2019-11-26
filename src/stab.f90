@@ -9,11 +9,12 @@ module stab
 
   real, parameter :: maxmu = 10.
 
-  subroutine incrit(num, q, r, p0, mode, mu, p, stat)
+contains
+  subroutine incrit(num, fos, rd, p0, p, mu, stat)
     integer, intent(in) :: num
-    real, intent(in) :: q(2), r(2), p0
-    character, intent(in) :: mode
-    real, intent(out) :: mu, p(:, :)
+    real, intent(in) :: fos, rd, p0
+    real, intent(inout) :: p(:, :)
+    real, intent(out) :: mu
     integer, intent(out) :: stat
     real, dimension(num) :: w, c, phi, u, alpha, b
     real, dimension(0:num) :: e, h, t
@@ -21,25 +22,17 @@ module stab
     integer :: bezn
 
     bezn = size(p, 2) - 1
-    stat = 0
-    if(mode == 'A') then
-      call bezarc(q, r, p)
-    else if(mode == 'L')
-      call bezlin(q, r, p)
-    else
-      stat = -1
-      return
-    end if
     popt = pack(p(:, 2:bezn), .true.)
     call amoeba(mos, popt, fn=mu, stat=stat)
     if(mu == maxmu) stat = -1
   contains
     function mos(x)
       real, intent(in) :: x(:)
+      real :: mos
       integer :: err
 
       p(:, 2:bezn) = reshape(x, (/ 2, bezn - 1 /))
-      scxcut(num, rd, p, w, c, phi, u, alpha, b, h, err)
+      call scxcut(num, rd, p, w, c, phi, u, alpha, b, h, err)
       if(err /= 0) then
         mos = maxmu
         return
@@ -63,11 +56,11 @@ program main
   end type
 
   character(len=255) :: arg, datafile, usage
-  integer :: bezn, i, id, m, n, num
+  integer :: bezn, i, j, m, n, num
   real :: a(2), b(2), bound, dx, fos, rd, xlim(2)
-  type(res_t) :: result
+  type(res_t), pointer :: result
 
-  usage = 'usage: stab [-ddx] [-ffos] [-n[B]num] [-rratio] [-x0|1value] file'
+  usage = 'usage: stab [-ddx] [-ffos] [-n[B]num] [-rratio] [-xL|Rvalue] file'
   bezn = 3
   dx = 5.
   fos = 1.3
@@ -91,9 +84,9 @@ program main
       case('r')
         read(arg(3:), *) rd
       case('x')
-        if(arg(3:3) == '0') then
+        if(arg(3:3) == 'L') then
           read(arg(4:), *) xlim(1)
-        else if(arg(3:3) == '1') then
+        else if(arg(3:3) == 'R') then
           read(arg(4:), *) xlim(2)
         else
           call fatal(usage)
@@ -139,18 +132,18 @@ program main
 
 contains
   subroutine inloc(a, b, p0)
-    real, intent(in) :: a(2), b(2), p0
     use bez, only: bezarc, bezlin
     use stab, only: incrit
+    real, intent(in) :: a(2), b(2), p0
     real :: mu, p(2, bezn + 1)
     integer :: err
 
     call bezarc(a, b, p)
-    call incrit(num, a, b, p0, mu, p, err)
+    call incrit(num, fos, rd, p0, p, mu, err)
     if(err == 0) call resadd(mu, p)
 
     call bezlin(a, b, p)
-    call incrit(num, a, b, p0, mu, p, err)
+    call incrit(num, fos, rd, p0, p, mu, err)
     if(err == 0) call resadd(mu, p)
   end subroutine
 
@@ -164,7 +157,7 @@ contains
     allocate(n, source=i)
 
     !$omp critical add
-    if(.not. assoicated(result)) then
+    if(.not. associated(result)) then
       result => n
       return
     end if
