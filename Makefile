@@ -4,17 +4,22 @@ CMD = debkin seep stab
 STABPACK = src/stabpack/bem.o src/stabpack/mos.o src/stabpack/num.o \
 	src/stabpack/stat.o src/stabpack/wa.o
 OBJ = src/ssat_env.o src/scx.o
+LDFLAGS += -L./ -lstabpack
 
 %.o: %.f90
 	@echo FC $<
 	@${FC} -o $@ -c ${FFLAGS} $<
 
-all: ${CMD}
+all: stabpack ${CMD}
 
 lbfgsb:
 	@${MAKE} -C src/$@
 
-debkin: ${STABPACK} ${OBJ} src/debkin.o
+stabpack: ${STABPACK}
+	@echo AR lib${@}.a
+	@${AR} rcs lib${@}.a $^
+
+debkin: ${OBJ} src/debkin.o
 	@echo LD $@
 	@${FC} -o $@ $^ ${LDFLAGS}
 
@@ -35,6 +40,6 @@ hyp2f1: src/numpack.o test/hyp2f1.o
 clean:
 	@echo cleaning...
 	@find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
-	@rm -f ${CMD}
+	@rm -f libstabpack.a ${CMD}
 
 .PHONY: all clean
