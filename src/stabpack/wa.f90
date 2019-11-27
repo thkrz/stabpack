@@ -1,8 +1,5 @@
-module pwp
+module wa_env
   implicit none
-  private
-  public barom
-  public hystp
 
   real, parameter :: g = 9.81, rho = 1.
   real, parameter :: p0 = 101.325, T0 = 288.15
@@ -16,138 +13,64 @@ contains
     barom = p0 * (1. - dT * h / T0)**5.255
   end function
 
-  elemental function hystp(h, p)
+  elemental function hystp(h, p1)
     real, intent(in) :: h
-    real, intent(in), optional :: p
+    real, intent(in), optional :: p1
     real :: hystp
 
     hystp = rho * g * h
-    if(present(p)) hystp = hystp + p
+    if(present(p1)) hystp = hystp + p1
   end function
 end module
 
-module swc
+module vg
   implicit none
   private
-  public swcms
-  public swcrhc
-  public swcewc
-  public swcset
+  public vg_t
 
-  abstract interface
-    pure function fcn(x, p)
-      real, intent(in) :: x, p(:)
-      real :: fcn
-    end function
-  end interface
-
-  procedure(fcn), pointer :: swcms => vgms
-  procedure(fcn), pointer :: swcrhc => vgrhc
-  procedure(fcn), pointer :: swcewc => vgewc
+  type vg_t
+    real a
+    real n
+  contains
+    procedure :: effsat => vg_t_effsat
+    procedure :: matsuc => vg_t_matsuc
+    procedure :: relhc => vg_t_relhc
+  end type
 
 contains
-  subroutine swcset(model)
-    character(len=2), intent(in) :: model
+  elemental function vg_t_effsat(self, h) result(se)
+    class(vg_t), intent(in) :: self
+    real, intent(in) :: h
+    real :: m, se
 
-    if(model == 'bc') then
-      swcms => bcms
-      swcrhc => bcrhc
-      swcewc => bcewc
-    else if(model == 'fx') then
-      swcms => fxms
-      swcrhc => null()
-      swcewc => fxewc
-    else if(model == 'vg') then
-      swcms => vgms
-      swcrhc => vgrhc
-      swcewc => vgewc
-    end if
-  end subroutine
-
-  pure function bcms(t, p)
-    real, intent(in) :: t, p(:)
-    real :: bcms
-
-    associate(hb => p(1), lambda => p(2))
-      bcms = hb * t**(-1. / lambda)
+    associate(a => self%a, n => self%n)
+      m = 1. - 1. / n
+      se = (1. + (a * h)**n)**(-m)
     end associate
   end function
 
-  pure function bcrhc(h, p)
-    real, intent(in) :: h, p(:)
-    real :: bcrhc
+  elemental function vg_t_matsuc(self, t) result(psi)
+    class(vg_t), intent(in) :: self
+    real, intent(in) :: t
+    real :: m, me, psi
 
-    bcrhc = 1
-    associate(hb => p(1), lambda => p(2))
-      if(h < hb) return
-      bcrhc = (hb / h)**(2. + 5. / 2. * lambda)
-    end associate
-  end function
-
-  pure function bcewc(h, p)
-    real, intent(in) :: h, p(:)
-    real :: bcewc
-
-    bcewc = 1
-    associate(hb => p(1), lambda => p(2))
-      if(h < hb) return
-      bcewc = (hb / h)**lambda
-    end associate
-  end function
-
-  pure function fxms(t, p)
-    real, intent(in) :: t, p(:)
-    real :: fxms
-
-    associate(a => p(1), n => p(2), m => p(3))
-      fxms = a * (exp(t**(-1. / m)) - exp(1.))**(1. / n)
-    end associate
-  end function
-
-  pure function fxewc(h, p)
-    real, intent(in) :: h, p(:)
-    real :: c, fxewc
-
-    c = 1
-    if(size(p) == 4) then
-      associate(hb => p(4))
-        c = log(1. + h / hb) / log(1. + 1e06 / hb)
-      end associate
-    end if
-    associate(a => p(1), n => p(2), m => p(3))
-      fxewc = c * log(exp(1.) + (h / a)**n)**(-m)
-    end associate
-  end function
-
-  pure function vgms(t, p)
-    real, intent(in) :: t, p(:)
-    real :: m, me, vgms
-
-    associate(a => p(1), n => p(2))
+    associate(a => self%a, n => self%n)
       m = 1. - 1. / n
       me = a * (.046 * m + 2.07 * m**2 + 19.5 * m**3) &
          / (1. + 4.7 * m + 16. * m**2)
-      vgms = max(1. / a * (t**(1 / m) - 1.)**(1 / n), me)
+      psi = 1. / a * (t**(1 / m) - 1.)**(1 / n)
     end associate
+    psi = max(psi, me)
   end function
 
-  pure function vgrhc(t, p)
-    real, intent(in) :: t, p(:)
-    real :: m, vgrhc
+  elemental function vg_t_relhc(self, t) result(kr)
+    class(vg_t), intent(in) :: self
+    real, intent(in) :: t
+    real :: m, kr
 
-    associate(a => p(1), n => p(2))
+    associate(a => self%a, n => self%n)
       m = 1. - 1. / n
-      vgrhc = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
-    end associate
-  end function
-
-  pure function vgewc(h, p)
-    real, intent(in) :: h, p(:)
-    real :: m, vgewc
-
-    associate(a => p(1), n => p(2))
-      m = 1. - 1. / n
-      vgewc = (1. + (a * h)**n)**(-m)
+      kr = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
     end associate
   end function
 end module

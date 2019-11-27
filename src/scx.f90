@@ -112,7 +112,10 @@ contains
     integer :: err, id, i, m, n
 
     pwpini = present(pf) .and. len_trim(pf) > 0
-    if(pwpini) call pwp%load(pf, err)
+    if(pwpini) then
+      call pwp%load(pf, msg, err)
+      if(err /= 0) call fatal(msg)
+    end if
 
     open(newunit=id, file=name, status='old', iostat=err, iomsg=msg)
     if(err /= 0) call fatal(msg)

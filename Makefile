@@ -4,7 +4,7 @@ CMD = debkin seep stab
 STABPACK = src/stabpack/bem.o src/stabpack/mos.o src/stabpack/num.o \
 	src/stabpack/stat.o src/stabpack/wa.o
 OBJ = src/ssat_env.o src/scx.o
-LDFLAGS += -L./ -lstabpack
+LDFLAGS += -L./ -lstabpack ${NETCDFLIB}
 
 %.o: %.f90
 	@echo FC $<

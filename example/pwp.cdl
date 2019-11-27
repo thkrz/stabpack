@@ -1,0 +1,15 @@
+netcdf pwp {
+dimensions:
+  m = 2 ;
+  n = 2 ;
+variables:
+  float map(m, n) ;
+    map:dx = 1.0 ;
+    map:dy = 1.0 ;
+    map:xllcorner = 0.0 ;
+    map:yllcorner = 0.0 ;
+  :title = "Pore water pressure" ;
+data:
+  map =
+  1, 2, NaN, 4 ;
+}
