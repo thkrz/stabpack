@@ -10,6 +10,7 @@ contains
     real, intent(in) :: x(:, :)
     real, intent(inout) :: m(:, :)
     real :: c(size(m, 1), size(m, 2)), tol, v, vmin
+    logical :: mask(size(x, 2))
     integer :: s(size(x, 2))
     integer :: i, j, k, num, n, z
 
@@ -27,10 +28,11 @@ contains
           end if
         end do
       end do
-      do concurrent(i = 1:k)
-        num = count(s == i)
+      do i = 1, k
+        mask = s == i
+        num = count(mask)
         do concurrent(j = 1:size(m, 1))
-          c(j, i) = sum(x(j, :), s == i) / num
+          c(j, i) = sum(x(j, :), mask) / num
         end do
       end do
       if(norm2(c - m) < tol) exit
