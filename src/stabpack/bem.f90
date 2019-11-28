@@ -38,8 +38,8 @@ contains
     if(err(nf90_def_var(ncid, 'map', NF90_DOUBLE, dimids, varid))) return
     if(err(nf90_put_att(ncid, varid, 'dx', self%dx))) return
     if(err(nf90_put_att(ncid, varid, 'dy', self%dy))) return
-    if(err(nf90_put_att(ncid, varid, 'offset_x', self%x))) return
-    if(err(nf90_put_att(ncid, varid, 'offset_y', self%y))) return
+    if(err(nf90_put_att(ncid, varid, 'origin_x', self%x))) return
+    if(err(nf90_put_att(ncid, varid, 'origin_y', self%y))) return
     if(err(nf90_enddef(ncid))) return
     if(err(nf90_put_var(ncid, varid, self%map))) return
     void = nf90_close(ncid)
@@ -91,8 +91,8 @@ contains
     if(err(nf90_inq_varid(ncid, 'map', varid))) return
     if(err(nf90_get_att(ncid, varid, 'dx', self%dx))) return
     if(err(nf90_get_att(ncid, varid, 'dy', self%dy))) return
-    if(err(nf90_get_att(ncid, varid, 'offset_x', self%x))) return
-    if(err(nf90_get_att(ncid, varid, 'offset_y', self%y))) return
+    if(err(nf90_get_att(ncid, varid, 'origin_x', self%x))) return
+    if(err(nf90_get_att(ncid, varid, 'origin_y', self%y))) return
     if(err(nf90_get_var(ncid, varid, self%map))) return
     void = nf90_close(ncid)
 

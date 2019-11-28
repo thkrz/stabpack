@@ -60,7 +60,7 @@ program main
   real :: a(2), b(2), bound, dx, fos, rd, xlim(2)
   type(res_t), pointer :: result
 
-  usage = 'usage: stab [-ddx] [-ffos] [-n[B]num] [-rratio] [-xL|Rvalue] file'
+  usage = 'usage: stab [-ddx] [-ffos] [-n[B]num] [-rratio] [-IA|Bvalue] file'
   bezn = 3
   dx = 5.
   fos = 1.3
@@ -83,10 +83,10 @@ program main
         end if
       case('r')
         read(arg(3:), *) rd
-      case('x')
-        if(arg(3:3) == 'L') then
+      case('I')
+        if(arg(3:3) == 'A') then
           read(arg(4:), *) xlim(1)
-        else if(arg(3:3) == 'R') then
+        else if(arg(3:3) == 'B') then
           read(arg(4:), *) xlim(2)
         else
           call fatal(usage)

@@ -8,12 +8,12 @@ module scx
   implicit none
   private
   public scxcrk
-  public scxdim
-  public scxnum
   public scxcut
   public scxdel
+  public scxdim
   public scxini
   public scxmat
+  public scxnum
   public scxtop
   public scxwa
 
@@ -159,18 +159,18 @@ contains
   pure subroutine scxmat(x, y, c, phi, w)
     real, intent(in) :: x, y
     real, intent(out) :: c, phi, w
-    real :: h0, h1, l
+    real :: y0, y1, l
     integer :: i
 
-    h0 = scxtop(x)
-    l = h0 - y
+    y0 = scxtop(x)
+    l = y0 - y
     i = 0
     w = 0
-    do while(y < h0 .and. i < scxnum)
+    do while(y < y0 .and. i < scxnum)
       i = i + 1
-      h1 = strata(i)%bot(x)
-      w = w + (h0 - max(h1, y)) / l * strata(i)%w
-      h0 = h1
+      y1 = strata(i)%bot(x)
+      w = w + (y0 - max(y1, y)) / l * strata(i)%w
+      y0 = y1
     end do
     c = strata(i)%c
     phi = strata(i)%phi
@@ -183,24 +183,20 @@ contains
     y = interp(x, ridge(1, :), ridge(2, :))
   end function
 
-  pure subroutine scxwa(x, p, k, n, i, r, h)
-    real, intent(in) :: x
-    real, intent(out) :: p(2, scxnum)
-    real, intent(out), dimension(scxnum) :: k, n, i, r, h
-    real :: y0, y1
+  pure subroutine scxwa(x, y, beta, k, i, n, r)
+    real, intent(in) :: x, y
+    real, intent(out) :: beta(2), k, i, n, r
     integer :: j
 
-    y0 = scxtop(x)
-    do j = 1, scxnum
-      p(:, j) = strata(j)%p
-      k(j) = strata(j)%k
-      n(j) = strata(j)%n
-      i(j) = strata(j)%i
-      r(j) = strata(j)%r
-      y1 = strata(j)%bot(x)
-      h(j) = y0 - y1
-      y0 = y1
+    j = 1
+    do while(y < strata(j)%bot(x) .and. j <= scxnum)
+      j = j + 1
     end do
+    beta = strata(j)%p
+    k = strata(j)%k
+    n = strata(j)%n
+    i = strata(j)%i
+    r = strata(j)%r
   end subroutine
 
   elemental function stra_t_bot(self, x) result(y)
