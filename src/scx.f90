@@ -194,8 +194,8 @@ contains
     end do
     beta = strata(j)%p
     k = strata(j)%k
-    n = strata(j)%n
     i = strata(j)%i
+    n = strata(j)%n
     r = strata(j)%r
   end subroutine
 

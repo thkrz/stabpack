@@ -14,11 +14,12 @@ end module
 module wasim
   use intgrt, only: nsimp
   use rtfind only: rtnewt
-  use swc
+  use vg
   implicit none
   private
   public wasga
-  public wasini
+
+  type(vg_t) :: swc
 
 contains
   pure function wasga(k, psi, time, delta) result(f)
@@ -42,9 +43,9 @@ contains
   subroutine wasini(name, dt, x, y)
   end subroutine
 
-  pure subroutine wasim(ep, ts, wap, ks, n, i0, r, h, z)
-    real, intent(in) :: ep(:, :), ts, wpa(:, :)
-    real, intent(in), dimension(:) :: ks, n, wci, wcr, wcs, h
+  pure subroutine wasim(ep, ts, beta, ksat, i0, n, r, h, z)
+    real, intent(in) :: ep(:, :), ts, beta(:, :)
+    real, intent(in), dimension(:) :: ksat, i0, n, r, h
     real, intent(out) :: z(:)
     real, dimension(size(z)) :: k, psi
     real :: eps, t(0:size(z)), theta, v, zd
@@ -70,29 +71,10 @@ contains
 
     do concurrent(j = i:num-1)
       jj = j + 1
-      k(j) = nsimp(k_, t(j), t(jj))
-      psi(j) = nsimp(psi_, t(j), t(jj))
+      k(j) = ksat * nsimp(swc%relhc, t(j), t(jj))
+      psi(j) = nsimp(swc%matsuc, t(j), t(jj))
     end do
-
-    do j = 1, size(ep, 2)
-      if(ep(1, j) > 0) call seep
-    end do
-
   contains
-    pure function k_(x)
-      real, intent(in) :: x
-      real :: k_
-
-      k_ = ks * swcrhs(x, wap)
-    end function
-
-    pure function psi_(x)
-      real, intent(in) :: x
-      real :: psi_
-
-      psi_ = swcms(x, wap)
-    end function
-
     pure subroutine seep
       integer, save :: d = num
 

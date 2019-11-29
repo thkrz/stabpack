@@ -61,6 +61,12 @@ program main
   call pwp%init(scxdim, dx, dy)
   call wa%init(scxdim, dx, dy)
 
+  if(len_trim(prec_file) == 0) then
+    call waini
+  else
+    call wasim
+  end if
+
   bound = scxdim(1, 1) + scxdim(2, 1)
   x = scxdim(1, 1) + .5 * dx
   do while(x < bound)
@@ -90,4 +96,22 @@ program main
   call pwp%dump(pwp_file, msg, stat)
   if(stat /= 0) call alert(msg)
   stop
+
+contains
+  subroutine waini
+    real :: beta(2), bound, i, k, n, r, x, y
+
+    bound = scxdim(1, 1) + scxdim(2, 1)
+    x = scxdim(1, 1) + .5 * dx
+    do while(x < bound)
+      y = scxtop(x) - .5 * dy
+      do while(y > scxdim(1, 2))
+        call scxwa(x, y, beta, k, i, n, r)
+        t = (i - r) / (n - r)
+        call wa%set(x, y, t)
+        y = y - dy
+      end do
+      x = x + dx
+    end do
+  end subroutine
 end program
