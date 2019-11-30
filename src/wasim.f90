@@ -43,11 +43,11 @@ contains
   subroutine wasini(name, dt, x, y)
   end subroutine
 
-  pure subroutine waseep(t, dt, v, h, beta, ksat, i0, n, r, z)
-    real, intent(in), :: t, dt, v, h, beta, ksat, i0, n, r
+  pure subroutine waseep(t, dt, v, beta, ksat, i0, n, r, z)
+    real, intent(in), :: t, dt, v, beta, ksat, i0, n, r
     real, intent(inout) :: z(:)
     real, dimension(size(z)) :: k, psi
-    real :: dn, dz, se(0:size(z)), se0, tt, vv, z0, ztemp
+    real :: dz, frac, se(0:size(z)), se0, tt, vv, z0, ztemp
     integer :: d, i, ii, j, jj, m, num
 
     num = size(z)
@@ -64,31 +64,26 @@ contains
     z(:i) = h
     z0 = waga(ksat, swc%matsuc(i0), dt, n - i0)
     d = num
-    dn = 1. / num
+    frac = 1. / num
     tt = t
     vv = v
     do while(tt > 0)
       do j = i + 1, d
         if(z(j) == 0) then
           z(j) = z0
-          vv = vv - z0 * dn
+          vv = vv - z0 * frac
         end if
-        if(vv <= 0) exit
         ! TODO: relative water content ok?
-        dz = 1. / (1. - se(d)) * (k(d) * psi(d) / z(j) + k(d))
+        dz = 1. / (se(d) - se(i)) * (k(d) * psi(d) / z(j) + k(d))
         ztemp = dz * dt
-        vv = vv - ztemp * dn
+        vv = vv - ztemp * frac
+        if(vv <= 0) then
+          d = j
+          exit
+        end if
         z(j) = z(j) + ztemp
       end do
       tt = tt - dt
     end do
-  contains
-  ! contains
-  !   pure subroutine seep
-  !     integer, save :: d = num
-
-  !     dz = c * (k(d) * psi(d) / z(j) + k(d))
-  !     z(j) = z(j) + dz * ts
-  !   end subroutine
   end subroutine
 end module

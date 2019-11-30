@@ -61,11 +61,7 @@ program main
   call pwp%init(scxdim, dx, dy)
   call wa%init(scxdim, dx, dy)
 
-  if(len_trim(prec_file) == 0) then
-    call waini
-  else
-    call wasim
-  end if
+  call waini
 
   bound = scxdim(1, 1) + scxdim(2, 1)
   x = scxdim(1, 1) + .5 * dx
