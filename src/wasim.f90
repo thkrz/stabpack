@@ -18,15 +18,16 @@ module wasim
   implicit none
   private
   public waga
+  public waseep
 
   type(vg_t) :: swc
 
 contains
-  pure function waga(k, psi, time, delta) result(f)
-    real, intent(in) :: k, psi, time, delta
+  pure function waga(k, psi, t, delta) result(f)
+    real, intent(in) :: k, psi, t, delta
     real :: f, kt, pd
 
-    kt = k * time
+    kt = k * t
     pd = abs(psi) * delta
     call rtnewt(funcd, kt, f)
 
@@ -40,50 +41,43 @@ contains
     end subroutine
   end subroutine
 
-  subroutine wasini(name, dt, x, y)
+  subroutine waini(name, dt, x, y)
   end subroutine
 
-  pure subroutine waseep(t, dt, v, beta, ksat, i0, n, r, z)
-    real, intent(in), :: t, dt, v, beta, ksat, i0, n, r
-    real, intent(inout) :: z(:)
+  pure subroutine waseep(t, dt, v0, beta, ksat, i0, n, r, z)
+    real, intent(in) :: t, dt, v0, beta(2), ksat, i0, n, r
+    real, intent(out) :: z(:)
     real, dimension(size(z)) :: k, psi
-    real :: dz, frac, se(0:size(z)), se0, tt, vv, z0, ztemp
-    integer :: d, i, ii, j, jj, m, num
+    real :: eps, se(0:size(z)), se0, z0
+    integer :: i, ii, j, jj, m, num
 
     num = size(z)
-    se(0) = 0
+    eps = 1. / (2. * num)
+    i = num
     se0 = (i0 - r) / (n - r)
+    se(0) = 0
     do j = 1, num
       jj = j - 1
       se(j) = real(j) / num
-      k(j) = ksat * nsimp(swc%relhc, se(jj), se(j))
-      psi(j) = nsimp(swc%matsuc, se(jj), se(j))
+      if(abs(se(jj) - se0) < eps) i = jj
     end do
 
-    i = nint(i0 * num / n)
+    swc%a = beta(1)
+    swc%n = beta(2)
     z(:i) = h
-    z0 = waga(ksat, swc%matsuc(i0), dt, n - i0)
-    d = num
-    frac = 1. / num
-    tt = t
-    vv = v
-    do while(tt > 0)
-      do j = i + 1, d
-        if(z(j) == 0) then
-          z(j) = z0
-          vv = vv - z0 * frac
-        end if
-        ! TODO: relative water content ok?
-        dz = 1. / (se(d) - se(i)) * (k(d) * psi(d) / z(j) + k(d))
-        ztemp = dz * dt
-        vv = vv - ztemp * frac
-        if(vv <= 0) then
-          d = j
-          exit
-        end if
-        z(j) = z(j) + ztemp
-      end do
-      tt = tt - dt
+    z0 = waga(ksat, swc%matsuc(se0), dt, n - i0)
+    where (z == 0) z = z0
+    do j = i, num - 1
+      jj = j + 1
+      k(j) = ksat * nsimp(swc%relhc, se(j), se(jj))
+      psi(j) = nsimp(swc%matsuc, se(j), se(jj))
     end do
+  contains
+    pure subroutine seep
+      integer, save :: d = num
+
+      dz = c * (k(d) * psi(d) / z(j) + k(d))
+      z(j) = z(j) + dz * ts
+    end subroutine
   end subroutine
 end module

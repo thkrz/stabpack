@@ -3,36 +3,36 @@ program main
   use ssat_env, only: alert, fatal
   implicit none
 
-  character(len=255) :: arg, input, msg, usage
+  character(len=255) :: input, msg, param, usage
   real :: drag, depth(2)
   real, allocatable :: arr(:, :)
   integer :: err, i, id, m, n
+  character :: c
 
   usage = 'usage: debkin [-ddrag] -zT|Bdepth -Pprofile'
   drag = 0
   depth = 0
-  do i = 1, command_argument_count()
-    call get_command_argument(i, arg)
-    if(arg(:1) == '-') then
-      select case(arg(2:2))
-      case('d')
-        read(arg(3:), *) drag
-      case('z')
-        if(arg(3:3) == 'T') then
-          read(arg(4:), *) depth(2)
-        else if(arg(3:3) == 'B') then
-          read(arg(4:), *) depth(1)
-        else
-          call fatal(usage)
-        end if
-      case('P')
-        input = arg(3:)
+  do
+    call flgget(param, c)
+    if(c == -1) exit
+    select case(c)
+    case('d')
+      read(param, *) drag
+    case('z')
+      call flgget(param, c, .true.)
+      select case(c)
+      case('T')
+        read(param, *) depth(2)
+      case('B')
+        read(param, *) depth(1)
       case default
         call fatal(usage)
       end select
-    else
+    case('P')
+      input = param
+    case default
       call fatal(usage)
-    end if
+    end select
   end do
   if(len_trim(input) == 0 .or. depth(1) <= depth(2)) call fatal(usage)
 
