@@ -100,8 +100,9 @@ program main
     end select
   end do
   do
-    call flgopt(datafile, err)
+    call flgopt(arg, err)
     if(err == -1) exit
+    datafile = arg
   end do
   if(len_trim(datafile) == 0) call fatal(usage)
 
