@@ -44,6 +44,7 @@ contains
 end module
 
 program main
+  use flag
   use ieee_arithmetic
   use ssat_env, only: fatal
   use scx
@@ -56,7 +57,8 @@ program main
   end type
 
   character(len=255) :: arg, datafile, usage
-  integer :: bezn, i, j, m, n, num
+  character :: c
+  integer :: bezn, err, i, j, m, n, num
   real :: a(2), b(2), bound, dx, fos, rd, xlim(2)
   type(res_t), pointer :: result
 
@@ -67,36 +69,39 @@ program main
   rd = .3
   xlim(1) = ieee_value(xlim(1), ieee_negative_inf)
   xlim(2) = ieee_value(xlim(2), ieee_positive_inf)
-  do i = 1, command_argument_count()
-    call get_command_argument(i, arg)
-    if(arg(:1) == '-') then
-      select case(arg(2:2))
-      case('d')
-        read(arg(3:), *) dx
-      case('f')
-        read(arg(3:), *) fos
-      case('n')
-        if(arg(3:3) == 'B') then
-          read(arg(4:), *) bezn
-        else
-          read(arg(3:), *) num
-        end if
-      case('r')
-        read(arg(3:), *) rd
-      case('I')
-        if(arg(3:3) == 'A') then
-          read(arg(4:), *) xlim(1)
-        else if(arg(3:3) == 'B') then
-          read(arg(4:), *) xlim(2)
-        else
-          call fatal(usage)
-        end if
+  do
+    call flgget(arg, c)
+    if(c == '') exit
+    select case(c)
+    case('d')
+      read(arg, *) dx
+    case('f')
+      read(arg, *) fos
+    case('n')
+      if(arg(1:1) == 'B') then
+        read(arg(2:), *) bezn
+      else
+        read(arg, *) num
+      end if
+    case('r')
+      read(arg, *) rd
+    case('I')
+      call flgget(arg, c, .true.)
+      select case(c)
+      case('A')
+        read(arg, *) xlim(1)
+      case('B')
+        read(arg, *) xlim(2)
       case default
         call fatal(usage)
       end select
-    else
-      datafile = arg
-    end if
+    case default
+      call fatal(usage)
+    end select
+  end do
+  do
+    call flgopt(datafile, err)
+    if(err == -1) exit
   end do
   if(len_trim(datafile) == 0) call fatal(usage)
 
