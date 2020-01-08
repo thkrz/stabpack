@@ -99,12 +99,8 @@ program main
       call fatal(usage)
     end select
   end do
-  do
-    call flgopt(arg, err)
-    if(err == -1) exit
-    datafile = arg
-  end do
-  if(len_trim(datafile) == 0) call fatal(usage)
+  call flgopt(datafile, err)
+  if(err == -1 .or. len_trim(datafile) == 0) call fatal(usage)
 
   call scxini(datafile, xlim)
   bound = scxdim(1, 1) + scxdim(2, 1)
