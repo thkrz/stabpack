@@ -1,4 +1,5 @@
 program main
+  use flag, only: flgget
   use num_env, only: swap
   use ssat_env, only: alert, fatal
   implicit none
@@ -14,7 +15,7 @@ program main
   depth = 0
   do
     call flgget(param, c)
-    if(c == -1) exit
+    if(c == '') exit
     select case(c)
     case('d')
       read(param, *) drag
