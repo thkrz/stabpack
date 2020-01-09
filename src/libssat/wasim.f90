@@ -1,6 +1,7 @@
 module grndwa
   implicit none
   private
+  public piezom
 
 contains
   elemental function piezom(x, dh, l) result(h)

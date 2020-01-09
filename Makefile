@@ -1,6 +1,6 @@
 include config.mk
 
-CMD = debkin #seep stab
+CMD = #debkin seep stab
 STABPACK = $(wildcard src/stabpack/*.f90)
 LIBSSAT = $(wildcard src/libssat/*.f90)
 LDFLAGS += -L./ -lssat -lstabpack ${NETCDFLIB}
@@ -29,7 +29,7 @@ ${CMD}: src/cmd/$$@.o
 
 test: hyp2f1
 
-hyp2f1: src/numpack.o test/hyp2f1.o
+hyp2f1: src/stabpack/num.o test/hyp2f1.o
 	@echo LD $@
 	@${FC} -o test/$@ $^ ${LDFLAGS}
 

@@ -5,7 +5,7 @@ module flag
   public flgopt
 
 contains
-  subroutine flgget(param, c, rep)
+  logical function flgget(param, c, rep)
     character(*), intent(inout) :: param
     character, intent(out) :: c
     logical, intent(in), optional :: rep
@@ -13,11 +13,13 @@ contains
     integer, save :: i = 1
 
     if(present(rep) .and. rep .eqv. .true.) then
+      flgget = len_trim(param) < 2
       c = param(1:1)
       param = param(2:)
       return
+      ! never reached
     end if
-    c = ''
+    flgget = .false.
     if(i > command_argument_count()) return
     call get_command_argument(i, arg)
     do while(arg(:1) /= '-')
@@ -28,15 +30,15 @@ contains
     c = arg(2:2)
     param = arg(3:)
     i = i + 1
-  end subroutine
+    flgget = .true.
+  end function
 
-  subroutine flgopt(opt, stat)
+  logical function flgopt(opt)
     character(*), intent(out) :: opt
-    integer, intent(out) :: stat
     character(len=255) :: arg
     integer, save :: i = 1
 
-    stat = -1
+    flgopt = .false.
     if(i > command_argument_count()) return
     call get_command_argument(i, arg)
     do while(arg(:1) == '-')
@@ -46,6 +48,6 @@ contains
     end do
     i = i + 1
     opt = arg
-    stat = 0
-  end subroutine
+    flgopt = .true.
+  end function
 end module

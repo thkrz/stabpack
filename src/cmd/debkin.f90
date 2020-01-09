@@ -13,14 +13,12 @@ program main
   usage = 'usage: debkin [-ddrag] -zT|Bdepth -Pprofile'
   drag = 0
   depth = 0
-  do
-    call flgget(param, c)
-    if(c == '') exit
+  do while(flgget(param, c))
     select case(c)
     case('d')
       read(param, *) drag
     case('z')
-      call flgget(param, c, .true.)
+      if(flgget(param, c, .true.)) call fatal(usage)
       select case(c)
       case('T')
         read(param, *) depth(2)
