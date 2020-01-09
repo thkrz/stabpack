@@ -494,6 +494,40 @@ contains
   end subroutine
 end module
 
+module intgrt
+  implicit none
+  public simpr
+
+contains
+  function simpr(fcn, a, b, n) result(s)
+    interface
+      function fcn(x)
+        real, intent(in) :: x
+        real :: fcn
+      end function
+    end interface
+    real, intent(in) :: a, b
+    integer, intent(in), optional :: n
+    real :: f0, fn, fs0, fs1, h, s, x0, x1
+    integer :: i, k
+
+    k = merge(n, 3, present(n))
+    h = (b - a) / k
+    f0 = fcn(a)
+    fn = fcn(b)
+    fs0 = 0
+    fs1 = 0
+    x0 = a
+    do i = 1, k
+      x1 = x0 + h
+      if(i < k) fs0 = fs0 + fcn(x1)
+      fs1 = fs1 + fcn((x0 + x1) / 2.)
+      x0 = x1
+    end do
+    s = h / 6. * (f0 + 2. * fs0 + fn + 4. * fs1)
+  end function
+end module
+
 module intp1d
   implicit none
   private

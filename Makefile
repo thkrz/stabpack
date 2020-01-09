@@ -1,35 +1,31 @@
 include config.mk
 
-CMD = debkin seep stab
-STABPACK = src/stabpack/bem.o src/stabpack/mos.o src/stabpack/num.o \
-	src/stabpack/stat.o src/stabpack/wa.o
-OBJ = src/flag.o src/ssat_env.o src/scx.o
-LDFLAGS += -L./ -lstabpack ${NETCDFLIB}
+CMD = debkin #seep stab
+STABPACK = $(wildcard src/stabpack/*.f90)
+LIBSSAT = $(wildcard src/libssat/*.f90)
+LDFLAGS += -L./ -lssat -lstabpack ${NETCDFLIB}
 
 %.o: %.f90
 	@echo FC $<
 	@${FC} -o $@ -c ${FFLAGS} $<
 
-all: stabpack ${CMD}
+all: stabpack libssat ${CMD}
 
 lbfgsb:
 	@${MAKE} -C src/$@
 
-stabpack: ${STABPACK}
+stabpack: ${STABPACK:.f90=.o}
 	@echo AR lib${@}.a
 	@${AR} rcs lib${@}.a $^
 
-debkin: ${OBJ} src/debkin.o
-	@echo LD $@
-	@${FC} -o $@ $^ ${LDFLAGS}
+libssat: ${LIBSSAT:.f90=.o}
+	@echo AR ${@}.a
+	@${AR} rcs ${@}.a $^
 
-seep: ${STABPACK} ${OBJ} src/seep.o
+.SECONDEXPANSION:
+${CMD}: src/cmd/$$@.o
 	@echo LD $@
-	@${FC} -o $@ $^ ${LDFLAGS}
-
-stab: ${STABPACK} ${OBJ} src/stab.o
-	@echo LD $@
-	@${FC} -o $@ $^ ${LDFLAGS}
+	@${FC} -o $@ $< ${LDFLAGS}
 
 test: hyp2f1
 
@@ -40,6 +36,9 @@ hyp2f1: src/numpack.o test/hyp2f1.o
 clean:
 	@echo cleaning...
 	@find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
-	@rm -f libstabpack.a ${CMD}
+	@rm -f libstabpack.a libssat.a ${CMD}
 
-.PHONY: all clean
+install:
+	@echo installing
+
+.PHONY: all clean install

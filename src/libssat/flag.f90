@@ -33,17 +33,19 @@ contains
   subroutine flgopt(opt, stat)
     character(*), intent(out) :: opt
     integer, intent(out) :: stat
+    character(len=255) :: arg
     integer, save :: i = 1
 
     stat = -1
     if(i > command_argument_count()) return
-    call get_command_argument(i, opt)
-    do while(opt(:1) == '-')
+    call get_command_argument(i, arg)
+    do while(arg(:1) == '-')
       i = i + 1
       if(i > command_argument_count()) return
-      call get_command_argument(i, opt)
+      call get_command_argument(i, arg)
     end do
     i = i + 1
+    opt = arg
     stat = 0
   end subroutine
 end module

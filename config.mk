@@ -17,6 +17,6 @@ FFLAGS = -std=f2008 -O3 \
 				 -fdefault-real-8 -fdefault-double-8 \
 				 -ffree-form -fmax-errors=1 \
 				 -pedantic -Wall \
-				 -m64 -J./src \
+				 -m64 -J./include \
 				 ${NETCDFINC}
 LDFLAGS = -s
