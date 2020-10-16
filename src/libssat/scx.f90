@@ -1,10 +1,9 @@
 module scx
-  use ieee_arithmetic, only: ieee_is_finite
+  use ieee_arithmetic, only: ieee_is_finite, ieee_is_nan, ieee_quiet_nan, ieee_value
   use bez, only: bezcrv
   use grid, only: grid_t
   use intp1d, only: interp
   use num_env, only: rad
-  use ssat_env
   implicit none
   private
   public scxcrk
@@ -17,10 +16,17 @@ module scx
   public scxtop
   public scxwa
 
+  type crk_t
+    integer i
+    real h
+  end type
+
   type stra_t
     real w
     real phi
     real c
+    real E
+    real nu
     real n
     real i
     real r
@@ -36,12 +42,13 @@ module scx
   logical :: pwpini
   type(grid_t) :: pwp
   type(stra_t), allocatable :: strata(:)
-  real, allocatable, dimension(:, :) :: ridge, scxcrk
+  type(crk_t), allocatable :: scxcrk(:)
+  real, allocatable :: omega(:, :)
   real :: scxdim(2, 2), tana
   integer :: scxnum
 
 contains
-  elemental function depth(x) result(y)
+  elemental function cdepth(x) result(y)
     real, intent(in) :: x
     real :: y
     integer :: i
@@ -98,7 +105,7 @@ contains
   subroutine scxdel
     deallocate(scxcrk)
     deallocate(strata)
-    deallocate(ridge)
+    deallocate(omega)
     scxdim = 0
     scxnum = 0
   end subroutine
@@ -107,9 +114,12 @@ contains
     character(*), intent(in) :: name
     real, intent(in) :: xlim(2)
     character(*), intent(in), optional :: pf
-    character(len=255) :: msg
+    character(len=255) :: msg, set
+    character(len=1) :: mode
     real :: alpha, h
-    integer :: err, id, i, m, n
+    integer :: err, id, a, b, i, m, n, pos
+    real, allocatable :: wa(:, :)
+    integer, allocatable, dimension(:) :: wa_crk, wa_str
 
     pwpini = present(pf) .and. len_trim(pf) > 0
     if(pwpini) then
@@ -120,40 +130,103 @@ contains
     open(newunit=id, file=name, status='old', iostat=err, iomsg=msg)
     if(err /= 0) call fatal(msg)
 
-    read(id, *, iostat=err, iomsg=msg) m, n
+    read(id, *, iostat=err, iomsg=msg) m
     if(err /= 0) call fatal(msg)
-    allocate(ridge(2 + n, m))
-    read(id, *, iostat=err, iomsg=msg) (ridge(:, i), i=1,m)
+    allocate(wa(2, m))
+    allocate(wa_crk(m))
+    allocate(wa_str(m))
+
+    n = 0
+    scxnum = 1
+    do i = 1, m
+      read(id, *, iostat=err, iomsg=msg) set
+      if(err /= 0) call fatal(msg)
+      pos = index(set, 'auto')
+      if(pos /= 0) then
+        if(i == 1 .or. i == m) call fatal('invalid input file')
+        wa(:, i) = ieee_value(1.0, ieee_quiet_nan)
+        if(pos == 1) then
+          read(set(5:), *) wa(2, i)
+        else
+          read(set(:pos), *) wa(1, i)
+        end if
+      else
+        read(set, *) wa(:, i)
+      end if
+      if(index(set, 'CR', .true.) /= 0) then
+        n = n + 1
+        wa_crk(n) = i
+      else if(index(set, 'OC', .true.) /= 0) then
+        wa_str(scxnum) = i
+        scxnum = scxnum + 1
+      end if
+    end do
+
+    do i = 2, m - 1
+      a = 0
+      b = 0
+      if(ieee_is_nan(wa(1, i))) then
+        a = 1
+        b = 2
+      else if(ieee_is_nan(wa(2, i))) then
+        a = 2
+        b = 1
+      end if
+      if(a + b == 3) wa(a, i) = interp(wa(b, i),&
+        [wa(b, i - 1), wa(b, i + 1)],&
+        [wa(a, i - 1), wa(a, i + 1)])
+    end do
+
+    read(id, *, iostat=err, iomsg=msg) n
     if(err /= 0) call fatal(msg)
+    allocate(omega(2 + n, m))
+    omega(:2, :) = wa
+    deallocate(wa)
+    scxnum = scxnum + n
+    allocate(strata(scxnum))
+
+    do i = 1, n
+      read(id, *, iostat=err, iomsg=msg) mode, h
+      if(err /= 0) call fatal(msg)
+      read(id, '(11(F5.2))', iostat=err, iomsg=msg) strata(i)
+      if(err /= 0) call fatal(msg)
+      select case(mode)
+        case('C')
+          omega(2 + i, :) = omega(2 + i - 1, :) - h
+        case('K')
+          ! call debkin
+          call fatal('not implemented')
+      end select
+      strata(i)%d = i
+    end do
 
     read(id, *, iostat=err, iomsg=msg) alpha
     if(err /= 0) call fatal(msg)
     tana = tan(rad(alpha))
-    read(id, *, iostat=err, iomsg=msg) scxnum
-    if(err /= 0) call fatal(msg)
-    allocate(strata(scxnum))
-    do i = 1, scxnum
-      read(id, '(10(F5.2))', iostat=err, iomsg=msg) h, strata(i)
+    do i = 1, scxnum - n
+      read(id, '(11(F5.2))', iostat=err, iomsg=msg) strata(i)
       if(err /= 0) call fatal(msg)
-      strata(i)%x = interp(h, ridge(2, :), ridge(1, :))
-      strata(i)%y = scxtop(strata(i)%x)
-      strata(i)%d = merge(i, 0, i <= n)
+      if(i < scxnum - n) then
+        strata(i + n)%x = omega(1, wa_str(i))
+        strata(i + n)%y = omega(2, wa_str(i))
+      end if
+      strata(i)%d = 0
     end do
-
-    read(id, *, iostat=err, iomsg=msg) m
-    if(err /= 0) call fatal(msg)
-    allocate(scxcrk(2, m))
-    read(id, *, iostat=err, iomsg=msg) scxcrk(1, :)
-    if(err /= 0) call fatal(msg)
-    scxcrk(2, :) = depth(scxcrk(1, :))
+    deallocate(wa_str)
 
     close(id)
 
-    m = size(ridge, 2)
-    scxdim(1, 1) = merge(xlim(1), ridge(1, 1), ieee_is_finite(xlim(1)))
-    scxdim(1, 2) = minval(ridge(2, :))
-    scxdim(2, 1) = merge(xlim(2), ridge(1, m), ieee_is_finite(xlim(2))) - scxdim(1, 1)
-    scxdim(2, 2) = maxval(ridge(2, :)) - scxdim(1, 2)
+    allocate(scxcrk(n))
+    do i = 1, n
+      scxcrk(i)%i = wa_crk(i)
+      scxcrk(i)%h = cdepth(omega(1, wa_crk(i)))
+    end do
+    deallocate(wa_crk)
+
+    scxdim(1, 1) = merge(xlim(1), omega(1, 1), ieee_is_finite(xlim(1)))
+    scxdim(1, 2) = minval(omega(2, :))
+    scxdim(2, 1) = merge(xlim(2), omega(1, m), ieee_is_finite(xlim(2))) - scxdim(1, 1)
+    scxdim(2, 2) = maxval(omega(2, :)) - scxdim(1, 2)
   end subroutine
 
   pure subroutine scxmat(x, y, c, phi, w)
@@ -180,7 +253,7 @@ contains
     real, intent(in) :: x
     real :: y
 
-    y = interp(x, ridge(1, :), ridge(2, :))
+    y = interp(x, omega(1, :), omega(2, :))
   end function
 
   pure subroutine scxwa(x, y, beta, k, i, n, r)
@@ -205,7 +278,7 @@ contains
     real :: y
 
     if(self%d > 0) then
-      y = interp(x, ridge(1, :), ridge(2+self%d, :))
+      y = interp(x, omega(1, :), omega(2+self%d, :))
     else
       y = self%y + tana * (x - self%x)
     end if
