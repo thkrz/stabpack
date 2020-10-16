@@ -3,7 +3,7 @@ module scx
   use bez, only: bezcrv
   use grid, only: grid_t
   use intp1d, only: interp
-  use num_env, only: rad
+  use num_env, only: rad, swap
   implicit none
   private
   public scxcrk
@@ -65,6 +65,51 @@ contains
     end associate
   end function
 
+  subroutine ykin(d, x, y1, y2)
+    real, intent(in) :: d, x(:), y1(:)
+    real, intent(out) :: y2(:)
+    real :: alpha, drag, h, k(size(y2)), s
+    integer :: i, j, n
+
+    n = size(x)
+    i = minloc(y1, 1)
+
+    j = maxloc(y1, 1)
+    h = y1(j) - y1(i)
+    s = sqrt((x(j) - x(i))**2 + h**2)
+    alpha = asin(h / s)
+    drag = h / (2. * cos(alpha) * s)
+
+    k = kin_(x, y1, drag, 1) + kin_(x, y1, drag, -1)
+    k = k / maxval(k)
+    !if(k(i) /= 1) call fatal('invalid drag.')
+    y2 = y1 - k * d
+
+  contains
+    pure function kin_(x, y, crr, dir) result(r)
+      real, intent(in) :: x(:), y(:), crr
+      integer, intent(in) :: dir
+      real :: alpha, h, r(size(x)), s
+      integer :: e1, e2, e3, i, ii, j, jj
+
+      e1 = 2
+      e2 = size(x)
+      e3 = dir
+      if(dir < 0) call swap(e1, e2)
+      r = 0
+      do i = e1, e2, e3
+        j = i - 1
+        h = dir * (y(j) - y(i))
+        s = sqrt((x(i) - x(j))**2 + h**2)
+        alpha = asin(h / s)
+        ii = i
+        jj = j
+        if(dir < 0) call swap(ii, jj)
+        r(ii) = max(0., h + r(jj) - crr * cos(alpha) * s)
+      end do
+    end function
+  end subroutine
+
   pure subroutine scxcut(n, rd, p, w, c, phi, u, alpha, b, h, stat)
     integer, intent(in) :: n
     real, intent(in) :: rd, p(:, :)
@@ -110,28 +155,30 @@ contains
     scxnum = 0
   end subroutine
 
-  subroutine scxini(name, xlim, pf)
+  subroutine scxini(name, xlim, pf, iomsg, iostat)
     character(*), intent(in) :: name
     real, intent(in) :: xlim(2)
     character(*), intent(in), optional :: pf
-    character(len=255) :: msg, set
+    character(*), intent(out) :: iomsg
+    integer, intent(out) :: iostat
+    character(len=255) :: set
     character(len=1) :: mode
     real :: alpha, h
-    integer :: err, id, a, b, i, m, n, pos
+    integer :: id, a, b, i, m, n, pos
     real, allocatable :: wa(:, :)
     integer, allocatable, dimension(:) :: wa_crk, wa_str
 
     pwpini = present(pf) .and. len_trim(pf) > 0
     if(pwpini) then
-      call pwp%load(pf, msg, err)
-      if(err /= 0) call fatal(msg)
+      call pwp%load(pf, iomsg, iostat)
+      if(iostat /= 0) return
     end if
 
-    open(newunit=id, file=name, status='old', iostat=err, iomsg=msg)
-    if(err /= 0) call fatal(msg)
+    open(newunit=id, file=name, status='old', iostat=iostat, iomsg=iomsg)
+    if(iostat /= 0) return
 
-    read(id, *, iostat=err, iomsg=msg) m
-    if(err /= 0) call fatal(msg)
+    read(id, *, iostat=iostat, iomsg=iomsg) m
+    if(iostat /= 0) return
     allocate(wa(2, m))
     allocate(wa_crk(m))
     allocate(wa_str(m))
@@ -139,8 +186,8 @@ contains
     n = 0
     scxnum = 1
     do i = 1, m
-      read(id, *, iostat=err, iomsg=msg) set
-      if(err /= 0) call fatal(msg)
+      read(id, *, iostat=iostat, iomsg=iomsg) set
+      if(iostat /= 0) return
       pos = index(set, 'auto')
       if(pos /= 0) then
         if(i == 1 .or. i == m) call fatal('invalid input file')
@@ -177,8 +224,8 @@ contains
         [wa(a, i - 1), wa(a, i + 1)])
     end do
 
-    read(id, *, iostat=err, iomsg=msg) n
-    if(err /= 0) call fatal(msg)
+    read(id, *, iostat=iostat, iomsg=iomsg) n
+    if(iostat /= 0) return
     allocate(omega(2 + n, m))
     omega(:2, :) = wa
     deallocate(wa)
@@ -186,26 +233,25 @@ contains
     allocate(strata(scxnum))
 
     do i = 1, n
-      read(id, *, iostat=err, iomsg=msg) mode, h
-      if(err /= 0) call fatal(msg)
-      read(id, '(11(F5.2))', iostat=err, iomsg=msg) strata(i)
-      if(err /= 0) call fatal(msg)
+      read(id, *, iostat=iostat, iomsg=iomsg) mode, h
+      if(iostat /= 0) return
+      read(id, '(11(F5.2))', iostat=iostat, iomsg=iomsg) strata(i)
+      if(iostat /= 0) return
       select case(mode)
         case('C')
           omega(2 + i, :) = omega(2 + i - 1, :) - h
         case('K')
-          ! call debkin
-          call fatal('not implemented')
+          call ykin(h, omega(1, :), omega(2 + i - 1, :), omega(2 + i, :))
       end select
       strata(i)%d = i
     end do
 
-    read(id, *, iostat=err, iomsg=msg) alpha
-    if(err /= 0) call fatal(msg)
+    read(id, *, iostat=iostat, iomsg=iomsg) alpha
+    if(iostat /= 0) return
     tana = tan(rad(alpha))
     do i = 1, scxnum - n
-      read(id, '(11(F5.2))', iostat=err, iomsg=msg) strata(i)
-      if(err /= 0) call fatal(msg)
+      read(id, '(11(F5.2))', iostat=iostat, iomsg=iomsg) strata(i)
+      if(iostat /= 0) return
       if(i < scxnum - n) then
         strata(i + n)%x = omega(1, wa_str(i))
         strata(i + n)%y = omega(2, wa_str(i))
@@ -213,7 +259,6 @@ contains
       strata(i)%d = 0
     end do
     deallocate(wa_str)
-
     close(id)
 
     allocate(scxcrk(n))
