@@ -1,5 +1,5 @@
 program main
-  use flag
+  use opt
   use ieee_arithmetic
   use ssat_env, only: fatal
   use scx
@@ -11,9 +11,7 @@ program main
   usage = 'usage: stab [-ddx] [-ffos] [-n[B]num] [-rratio] [-IA|Bvalue] file'
   xlim(1) = ieee_value(xlim(1), ieee_negative_inf)
   xlim(2) = ieee_value(xlim(2), ieee_positive_inf)
-  do
-    call flgget(arg, c)
-    if(c == '') exit
+  do while(optget(arg, c))
     select case(c)
     case('d')
       read(arg, *) dx
