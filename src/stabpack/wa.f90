@@ -6,8 +6,8 @@ module wa_env
 
 contains
   elemental function barom(h)
-    real, parameter :: dT = .0065
     real, intent(in) :: h
+    real, parameter :: dT = .0065
     real :: barom
 
     barom = p0 * (1. - dT * h / T0)**5.255
@@ -15,11 +15,23 @@ contains
 
   elemental function hystp(h, p1)
     real, intent(in) :: h
-    real, intent(in), optional :: p1
+    real, optional, intent(in) :: p1
     real :: hystp
 
     hystp = rho * g * h
     if(present(p1)) hystp = hystp + p1
+  end function
+
+  elemental function rwc(t, s, r)
+    real :: intent(in) :: t, s, r
+
+    rwc = (t - r) / (s - r)
+  end function
+
+  elemental function vwc(t, s, r)
+    real :: intent(in) :: t, s, r
+
+    vwc = t * (s - r) + r
   end function
 end module
 
@@ -32,13 +44,13 @@ module vg
     real a
     real n
   contains
-    procedure :: effsat => vg_t_effsat
-    procedure :: matsuc => vg_t_matsuc
-    procedure :: relhc => vg_t_relhc
+    procedure :: se => vg_t_se
+    procedure :: pm => vg_t_pm
+    procedure :: kr => vg_t_kr
   end type
 
 contains
-  elemental function vg_t_effsat(self, h) result(se)
+  elemental function vg_t_se(self, h) result(se)
     class(vg_t), intent(in) :: self
     real, intent(in) :: h
     real :: m, se
@@ -49,21 +61,21 @@ contains
     end associate
   end function
 
-  elemental function vg_t_matsuc(self, t) result(psi)
+  elemental function vg_t_pm(self, t) result(pm)
     class(vg_t), intent(in) :: self
     real, intent(in) :: t
-    real :: m, me, psi
+    real :: m, me, pm
 
     associate(a => self%a, n => self%n)
       m = 1. - 1. / n
       me = a * (.046 * m + 2.07 * m**2 + 19.5 * m**3) &
          / (1. + 4.7 * m + 16. * m**2)
-      psi = 1. / a * (t**(1 / m) - 1.)**(1 / n)
+      pm = 1. / a * (t**(1 / m) - 1.)**(1 / n)
     end associate
-    psi = max(psi, me)
+    pm = max(pm, me)
   end function
 
-  elemental function vg_t_relhc(self, t) result(kr)
+  elemental function vg_t_kr(self, t) result(kr)
     class(vg_t), intent(in) :: self
     real, intent(in) :: t
     real :: m, kr

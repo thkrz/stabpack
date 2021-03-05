@@ -2,7 +2,9 @@ module num_env
   implicit none
   private
   public pi
+  public bico
   public deg
+  public fact
   public inv2
   public rad
   public shft
@@ -15,11 +17,25 @@ module num_env
   end interface
 
 contains
+  pure function bico(n, k)
+    integer, intent(in) :: n, k
+    integer :: bico
+
+    bico = fact(n) / (fact(k) * fact(n-k))
+  end function
+
   elemental function deg(r) result(d)
     real, intent(in) :: r
     real :: d
 
     d = r * 180. / pi
+  end function
+
+  pure function fact(n)
+    integer, intent(in) :: n
+    integer :: i, fact
+
+    fact = product([(i, i=1,n)])
   end function
 
   pure subroutine inv2(a)
@@ -73,7 +89,7 @@ contains
 end module
 
 module bez
-  use num_env, only: inv2, pi
+  use num_env, only: bico, fact, inv2, pi
   implicit none
   private
   public bezarc
@@ -84,9 +100,9 @@ module bez
 
 contains
   pure subroutine bezarc(a, b, p)
-    real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.)
     real, intent(in) :: a(:), b(:)
     real, intent(out) :: p(:, :)
+    real, parameter :: k = 4. / 3. * (sqrt(2.) - 1.)
     integer :: i, m, n
     real :: br(2), dx(2)
     real :: beta, cosb, sinb, r, rot(2, 2)
@@ -108,14 +124,14 @@ contains
     cosb = cos(.25 * pi)
     sinb = cosb
     r = abs(a(2) - br(2)) / (2. * sinb)
-    do i = 1, m - 1
+    do concurrent(i = 1:m-1)
       p(:, i) = a
     end do
-    dx =  k * r * (/ sinb, cosb /)
+    dx =  k * r * [sinb, cosb]
     call inv2(rot)
     p(:, m) = matmul(rot, dx) + a
-    p(:, m + 1) = matmul(rot, br + dx - a) + a
-    do i = m + 2, n
+    p(:, m+1) = matmul(rot, br + dx - a) + a
+    do concurrent(i = m+2:n)
       p(:, i) = b
     end do
   end subroutine
@@ -139,20 +155,6 @@ contains
       real :: b
 
       b = bico(n, i) * t**i * (1 - t)**(n - i)
-    end function
-
-    pure function bico(n, k)
-      integer, intent(in) :: n, k
-      integer :: bico
-
-      bico = factln(n) / (factln(k) * factln(n-k))
-    end function
-
-    pure function factln(n)
-      integer, intent(in) :: n
-      integer :: i, factln
-
-      factln = product([(i, i=1,n)])
     end function
   end function
 
@@ -194,7 +196,7 @@ contains
 
     do concurrent(i = 0:k)
       t = real(i) / k
-      a(i + 1) = norm2(x(:, i + 1) - bezcrv(t, p))
+      a(i+1) = norm2(x(:, i+1) - bezcrv(t, p))
     end do
     if (all(a < tol)) return
 
@@ -206,7 +208,7 @@ contains
     n = size(q, 1)
     k = size(r, 1)
     deallocate(p)
-    allocate(p(n + k - 1, 2))
+    allocate(p(n+k-1, 2))
     p(:, :n) = q
     p(:, n:) = r
     deallocate(q)
@@ -236,7 +238,7 @@ contains
     if(n /= size(q, 2)) error stop
     lambda = 0
     do i = 1, n
-      lambda = lambda + norm2(p(:, i) - q(:, i))
+      lambda = lambda + hypot(p(:, i) - q(:, i))
     end do
     lambda = lambda / n
   end function
@@ -260,8 +262,8 @@ contains
     end interface
     real, intent(inout) :: x(:)
     real, intent(out) :: fn
-    real, intent(in), optional :: tol
-    integer, intent(out), optional :: stat
+    real, optional, intent(in) :: tol
+    integer, optional, intent(out) :: stat
     real :: c, alpha, beta, gamma, delta, &
             f(size(x)+1), fc, fe, fr, ftmp, &
             xx(size(x), size(x)+1), xc(size(x)), &
@@ -347,7 +349,7 @@ contains
   function brent(ax, bx, cx, func, tol, xmin, stat)
     real, intent(in) :: ax, bx, cx, tol
     real, intent(out) :: xmin
-    integer, intent(out), optional :: stat
+    integer, optional, intent(out) :: stat
     real :: brent
     interface
       function func(x)
@@ -496,6 +498,7 @@ end module
 
 module intgrt
   implicit none
+  private
   public simpr
 
 contains
@@ -507,7 +510,7 @@ contains
       end function
     end interface
     real, intent(in) :: a, b
-    integer, intent(in), optional :: n
+    integer, optional, intent(in) :: n
     real :: f0, fn, fs0, fs1, h, s, x0, x1
     integer :: i, k
 
@@ -571,8 +574,8 @@ contains
     end interface
     real, intent(in) :: p(:), x0
     real, intent(out) :: x
-    real, intent(in), optional :: tol
-    integer, intent(out), optional :: stat
+    real, optional, intent(in) :: tol
+    integer, optional, intent(out) :: stat
     real :: df, dx, f, xacc
     integer :: j
 
@@ -597,8 +600,8 @@ contains
     end interface
     real, intent(in) :: x1, x2
     real, intent(out) :: b
-    real, intent(in), optional :: tol
-    integer, intent(out), optional :: stat
+    real, optional, intent(in) :: tol
+    integer, optional, intent(out) :: stat
     integer :: i
     real :: a, c, d, e, fa, fb, fc, min1, min2, &
             p, q, r, s, xacc, xm
@@ -680,8 +683,8 @@ module spcfnc
 
 contains
   elemental function hyp2f1(a, b, c, z) result(f1)
-    integer, parameter :: itmax = 1000
     real, intent(in) :: a, b, c, z
+    integer, parameter :: itmax = 1000
     real :: aa, bb, cc, f1, fac, temp
     integer :: n
 
