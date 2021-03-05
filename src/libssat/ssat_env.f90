@@ -2,8 +2,6 @@ module ssat_env
   use, intrinsic :: iso_fortran_env, only: error_unit
   public
 
-  real, parameter :: g = 9.81
-
 contains
   subroutine alert(s)
     character(*), intent(in) :: s
