@@ -1,38 +1,53 @@
-include config.mk
+.POSIX:
+.SUFFIXES:
+.SUFFIXES: .o .f90
 
-CMD = #debkin seep stab
-STABPACK = $(wildcard src/stabpack/*.f90)
-LIBSSAT = $(wildcard src/libssat/*.f90)
-LDFLAGS += -L./ -lssat -lstabpack ${NETCDFLIB}
+VERSION = 1.0
+SONUM := $(shell echo $(VERSION) | cut -d '.' -f 1)
+
+PREFIX = /usr/local
+INCDIR = $(PREFIX)/include
+LIBDIR = $(PREFIX)/lib
+MANDIR = $(PREFIX)/share/man
+
+AR  = ar
+FC  = gfortran
+
+# DISLINROOT = /usr/local/dislin
+# DISLININC  = -I$(DISLINROOT)/gf/real64
+# DISLINLIB  = -L$(DISLINROOT) -ldislin_d
+
+NETCDFINC = -I/usr/include
+NETCDFLIB = -lnetcdff
+
+FFLAGS = -std=f2008 -O3 \
+				 -fdefault-real-8 -fdefault-double-8 \
+				 -ffree-form -fmax-errors=1 \
+				 -pedantic -Wall \
+				 -m64 -J./include \
+				 $(NETCDFINC)
+LDFLAGS = -s
+
+SRC = $(wildcard src/*.f90)
+OBJ = $(SRC:.f90=.o)
 
 %.o: %.f90
 	@echo FC $<
-	@${FC} -o $@ -c ${FFLAGS} $<
+	@$(FC) -o $@ -c $(FFLAGS) $<
 
-all: stabpack libssat ${CMD}
+all: libstabpack
 
-stabpack: ${STABPACK:.f90=.o}
-	@echo AR lib${@}.a
-	@${AR} rcs lib${@}.a $^
-
-libssat: ${LIBSSAT:.f90=.o}
-	@echo AR ${@}.a
-	@${AR} rcs ${@}.a $^
-
-.SECONDEXPANSION:
-${CMD}: src/cmd/$$@.o
-	@echo LD $@
-	@${FC} -o $@ $< ${LDFLAGS}
-
-test: hyp2f1
-
-hyp2f1: src/stabpack/num.o test/hyp2f1.o
-	@echo LD $@
-	@${FC} -o test/$@ $^ ${LDFLAGS}
+libstabpack: $(OBJ)
+	@echo AR $(@).a
+	@$(AR) rcs $(@).a $^
+	@echo LD $(@).so
+	@$(FC) -fPIC -shared -o $(@).so.$(VERSION) $^
+	@ln -s $(@).so.$(VERSION) $(@).so.$(SONUM)
+	@ln -s $(@).so.$(SONUM) $(@).so
 
 clean:
 	find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
-	rm -f libstabpack.a libssat.a ${CMD}
+	rm -f libstabpack.*
 
 install:
 	@echo installing
