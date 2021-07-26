@@ -32,11 +32,6 @@ module scx
     real r
     real p(2)
     real k
-    real x
-    real y
-    integer d
-  contains
-    procedure :: bot => stra_t_bot
   end type
 
   logical :: pwpini
