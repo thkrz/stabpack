@@ -21,10 +21,10 @@ contains
       cosa2 = cos(alpha(j))**2
       tana = tan(alpha(j))
       tanp = tan(phi(j))
-      de(i) = cosa2 * (6. * f * dt(j) * (f * tana - tanp) &
-            + (2. * b(j) * w(j) * h(j) + b(j) * w(j) * h(i) &
-            + 6. * t(j) - 6. * e(j) * tana) * tanp + 3. * b(j) / cosa2 &
-            * (c(j) - u(j) * tanp) + 3. * f * de(j) &
+      de(i) = cosa2 * (6. * f * dt(j) * (f * tana - tanp)&
+            + (2. * b(j) * w(j) * h(j) + b(j) * w(j) * h(i)&
+            + 6. * t(j) - 6. * e(j) * tana) * tanp + 3. * b(j) / cosa2&
+            * (c(j) - u(j) * tanp) + 3. * f * de(j)&
             * (f - f * tana**2 + 2. * tana * tanp))
       de(i) = de(i) / (3. * f**2)
       dt(i) = (de(i) + de(j)) * tana - dt(j)
@@ -78,8 +78,8 @@ contains
       tana = tan(alpha(j))
       tana2 = tana**2
       phim = tan(phi(j)) / f
-      e(i) = 2. * t(j) * (tana - phim) + e(j) * (1. + 2. * tana * phim - tana2) &
-           + w(j) * b(j) / 3. * (h(i) + 2. * h(j)) * (tana - phim) &
+      e(i) = 2. * t(j) * (tana - phim) + e(j) * (1. + 2. * tana * phim - tana2)&
+           + w(j) * b(j) / 3. * (h(i) + 2. * h(j)) * (tana - phim)&
            - b(j) * (1. + tana2) * (c(j) / f - u(j) * phim)
       e(i) = e(i) / (1. + tana2)
       t(i) = (e(i) + e(j)) * tana - t(j) + w(j) * b(j) / 6. * (h(i) - h(j))
