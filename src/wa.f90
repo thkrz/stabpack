@@ -35,54 +35,60 @@ contains
   end function
 end module
 
-module vg
+module swcc
   implicit none
   private
-  public vg_t
-
-  type vg_t
-    real a
-    real n
-  contains
-    procedure :: se => vg_t_se
-    procedure :: pm => vg_t_pm
-    procedure :: kr => vg_t_kr
-  end type
+  public vg_se
+  public vg_pm
+  public vg_kr
 
 contains
-  elemental function vg_t_se(self, h) result(se)
-    class(vg_t), intent(in) :: self
-    real, intent(in) :: h
+  elemental function vg_se(h, a, n) result(se)
+    real, intent(in) :: h, a, n
     real :: m, se
 
-    associate(a => self%a, n => self%n)
-      m = 1. - 1. / n
-      se = (1. + (a * h)**n)**(-m)
-    end associate
+    m = 1. - 1. / n
+    se = (1. + (a * h)**n)**(-m)
   end function
 
-  elemental function vg_t_pm(self, t) result(pm)
-    class(vg_t), intent(in) :: self
-    real, intent(in) :: t
+  elemental function vg_pm(t, a, n) result(pm)
+    real, intent(in) :: t, a, n
     real :: m, me, pm
 
-    associate(a => self%a, n => self%n)
-      m = 1. - 1. / n
-      me = a * (.046 * m + 2.07 * m**2 + 19.5 * m**3) &
-         / (1. + 4.7 * m + 16. * m**2)
-      pm = 1. / a * (t**(1 / m) - 1.)**(1 / n)
-    end associate
+    m = 1. - 1. / n
+    me = a * (.046 * m + 2.07 * m**2 + 19.5 * m**3) &
+       / (1. + 4.7 * m + 16. * m**2)
+    pm = 1. / a * (t**(1 / m) - 1.)**(1 / n)
     pm = max(pm, me)
   end function
 
-  elemental function vg_t_kr(self, t) result(kr)
-    class(vg_t), intent(in) :: self
-    real, intent(in) :: t
+  elemental function vg_kr(t, a, n) result(kr)
+    real, intent(in) :: t, a, n
     real :: m, kr
 
-    associate(a => self%a, n => self%n)
-      m = 1. - 1. / n
-      kr = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
-    end associate
+    m = 1. - 1. / n
+    kr = sqrt(t) * (1. - (1. - t**(1. / m))**m)**2
   end function
 end module
+
+module popr
+  use wa_env
+  use swcc
+  implicit none
+
+contains
+  pure function pwp(z, t, n, r, beta, h) result(u)
+    real, intent(in) :: z, t, n, r, beta(2)
+    real, intent(in), optional :: h
+
+    theta = rwc(t, n, r)
+    ua = barom(h-z)
+    if(theta == 1) then
+      pm = ua - hystp(z, barom(h))
+    else
+      pm = vg_pm(theta, beta(1), beta(2))
+    end if
+    u = ua - pm
+  end function
+end module
+
