@@ -552,7 +552,7 @@ contains
         return
       end if
     end do
-    if(x > xp(n)) y = fp(n)
+    y = fp(n)
   end function
 end module
 
