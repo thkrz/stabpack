@@ -1,4 +1,4 @@
-module numutl
+module math
   implicit none
   private
   public pi
