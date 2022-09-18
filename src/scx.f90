@@ -82,9 +82,9 @@ contains
     end if
 
     scxdim(1, 1) = x(1)
-    scxdim(1, 2) = min(y)
+    scxdim(1, 2) = minval(y)
     scxdim(2, 1) = x(n)
-    scxdim(2, 2) = max(y)
+    scxdim(2, 2) = maxval(y)
 
     y = y - scxdim(1, 2)
     m = ceiling((x(n) - x(1)) / dx)
