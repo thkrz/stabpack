@@ -1,19 +1,19 @@
 module grid
   use, intrinsic :: ieee_arithmetic
-  use netcdf
   implicit none
   private
   public grid_t
 
   type grid_t
     private
-    integer m
-    integer n
-    real dx
-    real dy
+    integer ncols
+    integer nrows
     real x
     real y
-    real, allocatable :: map(:, :)
+    real dx
+    real dy
+    real nodata
+    real, allocatable :: cell(:, :)
   contains
     procedure :: dump => grid_t_dump
     procedure :: get => grid_t_get
