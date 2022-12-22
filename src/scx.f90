@@ -93,4 +93,7 @@ contains
       scxtop(i) = nint(interp(i * dx, x, y) / dy)
     end do
   end subroutine
+
+  elemental function scxtop(x) result(y)
+  end function
 end module
