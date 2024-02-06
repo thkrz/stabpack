@@ -129,13 +129,12 @@ contains
     real, intent(in) :: a(:), b(:)
     real, intent(out) :: p(:, :)
     real :: dx(size(a))
-    integer :: i, j, n
+    integer :: i, n
 
     dx = b - a
     n = size(p, 2) - 1
-    do i = 0, n
-      j = i + 1
-      p(:, j) = dx * real(i) / n + a
+    do concurrent(i=0:n)
+      p(:, i+1) = dx * real(i) / n + a
     end do
   end subroutine
 

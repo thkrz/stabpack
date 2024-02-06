@@ -16,7 +16,7 @@ contains
 
     de = 0
     dt = 0
-    do i = 2, n + 1
+    do concurrent(i=2:n+1) local(j, cosa2, tana, tanp)
       j = i - 1
       cosa2 = cos(alpha(j))**2
       tana = tan(alpha(j))
@@ -73,7 +73,7 @@ contains
       t(1) = p0
     end if
 
-    do i = 2, n + 1
+    do concurrent(i=2:n+1) local(j, tana, tana2, phim)
       j = i - 1
       tana = tan(alpha(j))
       tana2 = tana**2

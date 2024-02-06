@@ -10,8 +10,8 @@ INCDIR = $(PREFIX)/include
 LIBDIR = $(PREFIX)/lib
 MANDIR = $(PREFIX)/share/man
 
-AR  = ar
-FC  = gfortran
+AR = ar
+FC = gfortran
 
 # DISLINROOT = /usr/local/dislin
 # DISLININC  = -I$(DISLINROOT)/gf/real64
@@ -44,6 +44,9 @@ libstabpack: $(OBJ)
 	@$(FC) -fPIC -shared -o $(@).so.$(VERSION) $^
 	@ln -s $(@).so.$(VERSION) $(@).so.$(SONUM)
 	@ln -s $(@).so.$(SONUM) $(@).so
+
+help: doc/bez3.scd
+	scdoc < $< > bez.3
 
 clean:
 	find . \( -name '*.mod' -o -name '*.o' \) -exec rm {} \;
